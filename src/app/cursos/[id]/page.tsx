@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Status } from '@prisma/client'
 import { buscarCursoPorId } from '@/lib/api/cursos'
-import { calcularMedia, calcularSituacao, situacaoStyle } from '@/lib/utils'
+import { calcularMedia, calcularSituacao, situacaoStyle, cn } from '@/lib/utils'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -44,13 +44,7 @@ export default async function CursoDetalhesPage({ params }: PageProps) {
         <InfoItem
           label="Status"
           value={
-            <span
-              className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                curso.status === Status.ATIVO
-                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                  : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400'
-              }`}
-            >
+            <span className={statusBadgeClass(curso.status)}>
               {curso.status === Status.ATIVO ? 'Ativo' : 'Inativo'}
             </span>
           }
@@ -107,6 +101,15 @@ export default async function CursoDetalhesPage({ params }: PageProps) {
         </div>
       )}
     </main>
+  )
+}
+
+function statusBadgeClass(status: Status) {
+  return cn(
+    'inline-flex rounded-full px-2 py-0.5 text-xs font-medium',
+    status === Status.ATIVO
+      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+      : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400',
   )
 }
 

@@ -1,12 +1,19 @@
 import { prisma } from '@/lib/prisma'
 import { AlunoFormData } from '@/schemas/aluno'
 
+const alunoListSelect = {
+  id: true,
+  nome: true,
+  email: true,
+  dataNascimento: true,
+  fotoUrl: true,
+  _count: { select: { matriculas: true } },
+} as const
+
 export async function listarAlunos() {
   return prisma.aluno.findMany({
+    select: alunoListSelect,
     orderBy: { nome: 'asc' },
-    include: {
-      _count: { select: { matriculas: true } },
-    },
   })
 }
 
@@ -25,10 +32,8 @@ export async function buscarPorNomeOuEmail(termo: string) {
         { email: { contains: termo, mode: 'insensitive' } },
       ],
     },
+    select: alunoListSelect,
     orderBy: { nome: 'asc' },
-    include: {
-      _count: { select: { matriculas: true } },
-    },
   })
 }
 

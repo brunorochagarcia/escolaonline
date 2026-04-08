@@ -1,8 +1,9 @@
 import Link from 'next/link'
+import { Suspense } from 'react'
 import { Status } from '@prisma/client'
 import { listarCursos } from '@/lib/api/cursos'
 import { FiltroStatus } from '@/components/cursos/FiltroStatus'
-import { Suspense } from 'react'
+import { cn } from '@/lib/utils'
 
 interface PageProps {
   searchParams: Promise<{ status?: string }>
@@ -56,13 +57,7 @@ export default async function CursosPage({ searchParams }: PageProps) {
                   <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">{curso.cargaHoraria}h</td>
                   <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">{curso._count.matriculas}</td>
                   <td className="px-4 py-3">
-                    <span
-                      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                        curso.status === Status.ATIVO
-                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                          : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400'
-                      }`}
-                    >
+                    <span className={statusBadgeClass(curso.status)}>
                       {curso.status === Status.ATIVO ? 'Ativo' : 'Inativo'}
                     </span>
                   </td>
@@ -81,5 +76,14 @@ export default async function CursosPage({ searchParams }: PageProps) {
         </div>
       )}
     </main>
+  )
+}
+
+function statusBadgeClass(status: Status) {
+  return cn(
+    'inline-flex rounded-full px-2 py-0.5 text-xs font-medium',
+    status === Status.ATIVO
+      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+      : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400',
   )
 }

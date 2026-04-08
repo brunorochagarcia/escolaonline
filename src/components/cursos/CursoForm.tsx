@@ -1,9 +1,10 @@
 'use client'
 
+import { useState, useTransition } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useTransition } from 'react'
 import { cursoSchema, CursoFormData } from '@/schemas/curso'
+import { cn } from '@/lib/utils'
 
 interface CursoFormProps {
   defaultValues?: CursoFormData
@@ -13,6 +14,7 @@ interface CursoFormProps {
 
 export function CursoForm({ defaultValues, onSubmit, submitLabel }: CursoFormProps) {
   const [isPending, startTransition] = useTransition()
+  const [formError, setFormError] = useState<string | null>(null)
 
   const {
     register,
@@ -25,10 +27,14 @@ export function CursoForm({ defaultValues, onSubmit, submitLabel }: CursoFormPro
   })
 
   function submit(data: CursoFormData) {
+    setFormError(null)
     startTransition(async () => {
       const result = await onSubmit(data)
-      if (result?.errors) {
-        for (const [field, messages] of Object.entries(result.errors)) {
+      if (!result?.errors) return
+      for (const [field, messages] of Object.entries(result.errors)) {
+        if (field === '_form') {
+          setFormError(messages[0])
+        } else {
           setError(field as keyof CursoFormData, { message: messages[0] })
         }
       }
@@ -37,6 +43,12 @@ export function CursoForm({ defaultValues, onSubmit, submitLabel }: CursoFormPro
 
   return (
     <form onSubmit={handleSubmit(submit)} className="space-y-5">
+      {formError && (
+        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
+          {formError}
+        </p>
+      )}
+
       <Field label="Nome" error={errors.nome?.message}>
         <input
           {...register('nome')}
@@ -119,11 +131,11 @@ function Field({
 }
 
 function inputClass(hasError: boolean) {
-  return [
+  return cn(
     'rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2',
     'bg-white dark:bg-zinc-900 dark:text-zinc-100',
     hasError
       ? 'border-red-400 focus:ring-red-300'
       : 'border-zinc-300 focus:ring-zinc-400 dark:border-zinc-700',
-  ].join(' ')
+  )
 }

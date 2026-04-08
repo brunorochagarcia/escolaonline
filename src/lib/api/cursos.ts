@@ -15,11 +15,19 @@ export async function listarCursos(status?: Status) {
 export async function buscarCursoPorId(id: string) {
   return prisma.curso.findUnique({
     where: { id },
-    include: {
+    select: {
+      id: true,
+      nome: true,
+      descricao: true,
+      cargaHoraria: true,
+      instrutor: true,
+      status: true,
       matriculas: {
-        include: {
-          aluno: true,
-          notas: true,
+        select: {
+          id: true,
+          dataInicio: true,
+          aluno: { select: { nome: true } },
+          notas: { select: { valor: true } },
         },
       },
     },
