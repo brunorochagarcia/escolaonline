@@ -1,0 +1,69 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+}
+
+enum Status {
+  ATIVO
+  INATIVO
+}
+
+model User {
+  id    String @id @default(cuid())
+  nome  String
+  email String @unique
+  senha String
+  role  Role   @default(ADMIN)
+}
+
+model Aluno {
+  id             String      @id @default(cuid())
+  nome           String
+  email          String      @unique
+  dataNascimento DateTime
+  fotoUrl        String?
+  fotoPublicId   String?
+
+  matriculas     Matricula[]
+}
+
+model Curso {
+  id           String      @id @default(cuid())
+  nome         String
+  descricao    String
+  cargaHoraria Int
+  instrutor    String
+  status       Status      @default(ATIVO)
+
+  matriculas   Matricula[]
+}
+
+model Matricula {
+  id         String   @id @default(cuid())
+  alunoId    String
+  cursoId    String
+  dataInicio DateTime @default(now())
+
+  aluno      Aluno    @relation(fields: [alunoId], references: [id])
+  curso      Curso    @relation(fields: [cursoId], references: [id])
+  notas      Nota[]
+
+  @@unique([alunoId, cursoId])
+}
+
+model Nota {
+  id          String    @id @default(cuid())
+  matriculaId String
+  descricao   String
+  valor       Float
+  data        DateTime  @default(now())
+
+  matricula   Matricula @relation(fields: [matriculaId], references: [id])
+}
