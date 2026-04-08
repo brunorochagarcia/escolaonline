@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { notaSchema } from '@/schemas/nota'
 import { lancarNota, excluirNota } from '@/lib/api/notas'
+import { requireAuth } from '@/lib/auth-guard'
 
 export type NotaActionState = {
   errors?: { descricao?: string[]; valor?: string[]; data?: string[]; _form?: string[] }
@@ -15,6 +16,8 @@ export async function lancarNotaAction(
   _prev: NotaActionState,
   formData: FormData,
 ): Promise<NotaActionState> {
+  await requireAuth()
+
   const parsed = notaSchema.safeParse({
     descricao: formData.get('descricao'),
     valor: formData.get('valor'),
@@ -36,6 +39,7 @@ export async function lancarNotaAction(
 }
 
 export async function excluirNotaAction(id: string, alunoId: string) {
+  await requireAuth()
   await excluirNota(id)
   revalidatePath(`/alunos/${alunoId}`)
 }

@@ -26,6 +26,14 @@ export async function buscarCursoPorId(id: string) {
   })
 }
 
+export async function listarCursosParaFiltro(status?: Status) {
+  return prisma.curso.findMany({
+    where: status ? { status } : undefined,
+    select: { id: true, nome: true },
+    orderBy: { nome: 'asc' },
+  })
+}
+
 export async function criarCurso(data: CursoFormData) {
   return prisma.curso.create({ data })
 }

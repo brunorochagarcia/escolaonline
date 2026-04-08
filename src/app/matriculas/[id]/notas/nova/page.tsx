@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { prisma } from '@/lib/prisma'
+import { buscarMatriculaParaLancarNota } from '@/lib/api/matriculas'
 import { NotaForm } from '@/components/notas/NotaForm'
 
 interface PageProps {
@@ -10,10 +10,7 @@ interface PageProps {
 export default async function NovaNotaPage({ params }: PageProps) {
   const { id: matriculaId } = await params
 
-  const matricula = await prisma.matricula.findUnique({
-    where: { id: matriculaId },
-    include: { aluno: true, curso: true },
-  })
+  const matricula = await buscarMatriculaParaLancarNota(matriculaId)
 
   if (!matricula) notFound()
 

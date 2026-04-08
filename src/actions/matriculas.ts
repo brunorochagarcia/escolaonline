@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { criarMatricula, excluirMatricula, MatriculaDuplicadaError } from '@/lib/api/matriculas'
+import { requireAuth } from '@/lib/auth-guard'
 
 const matriculaSchema = z.object({
   alunoId: z.string().min(1, 'Selecione um aluno'),
@@ -19,6 +20,8 @@ export async function criarMatriculaAction(
   _prev: MatriculaActionState,
   formData: FormData,
 ): Promise<MatriculaActionState> {
+  await requireAuth()
+
   const parsed = matriculaSchema.safeParse({
     alunoId: formData.get('alunoId'),
     cursoId: formData.get('cursoId'),
@@ -30,7 +33,7 @@ export async function criarMatriculaAction(
   }
 
   try {
-    await criarMatricula(parsed.data.alunoId, parsed.data.cursoId)
+    await criarMatricula(parsed.data.alunoId, parsed.data.cursoId, parsed.data.dataInicio)
   } catch (err) {
     if (err instanceof MatriculaDuplicadaError) {
       return { errors: { _form: [err.message] } }
@@ -43,6 +46,7 @@ export async function criarMatriculaAction(
 }
 
 export async function excluirMatriculaAction(id: string) {
+  await requireAuth()
   await excluirMatricula(id)
   revalidatePath('/matriculas')
 }

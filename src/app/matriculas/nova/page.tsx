@@ -1,13 +1,13 @@
 import Link from 'next/link'
-import { listarAlunos } from '@/lib/api/alunos'
-import { listarCursos } from '@/lib/api/cursos'
-import { MatriculaForm } from '@/components/matriculas/MatriculaForm'
 import { Status } from '@prisma/client'
+import { listarAlunosParaSelect } from '@/lib/api/alunos'
+import { listarCursosParaFiltro } from '@/lib/api/cursos'
+import { MatriculaForm } from '@/components/matriculas/MatriculaForm'
 
 export default async function NovaMatriculaPage() {
   const [alunos, cursos] = await Promise.all([
-    listarAlunos(),
-    listarCursos(Status.ATIVO),
+    listarAlunosParaSelect(),
+    listarCursosParaFiltro(Status.ATIVO),
   ])
 
   return (

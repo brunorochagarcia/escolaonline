@@ -10,6 +10,13 @@ export async function listarAlunos() {
   })
 }
 
+export async function listarAlunosParaSelect() {
+  return prisma.aluno.findMany({
+    select: { id: true, nome: true },
+    orderBy: { nome: 'asc' },
+  })
+}
+
 export async function buscarPorNomeOuEmail(termo: string) {
   return prisma.aluno.findMany({
     where: {

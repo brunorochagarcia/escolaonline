@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { Suspense } from 'react'
 import { listarMatriculas } from '@/lib/api/matriculas'
-import { listarCursos } from '@/lib/api/cursos'
+import { listarCursosParaFiltro } from '@/lib/api/cursos'
 import { FiltroCurso } from '@/components/matriculas/FiltroCurso'
 
 interface PageProps {
@@ -13,7 +13,7 @@ export default async function MatriculasPage({ searchParams }: PageProps) {
 
   const [matriculas, cursos] = await Promise.all([
     listarMatriculas(undefined, cursoId),
-    listarCursos(),
+    listarCursosParaFiltro(),
   ])
 
   return (
