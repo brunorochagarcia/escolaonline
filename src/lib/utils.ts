@@ -5,5 +5,5 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export { calcularMedia, calcularSituacao } from '@/lib/utils/notas'
+export { calcularMedia, calcularMediaGeral, calcularSituacao } from '@/lib/utils/notas'
 export type { Situacao } from '@/lib/utils/notas'

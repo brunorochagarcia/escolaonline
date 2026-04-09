@@ -63,6 +63,29 @@ export async function criarAluno(data: AlunoFormData) {
   })
 }
 
+// RN-04: apenas alunos com ao menos uma nota lançada
+export async function listarAlunosParaRanking() {
+  return prisma.aluno.findMany({
+    where: {
+      matriculas: {
+        some: {
+          notas: { some: {} },
+        },
+      },
+    },
+    select: {
+      id: true,
+      nome: true,
+      fotoUrl: true,
+      matriculas: {
+        select: {
+          notas: { select: { valor: true } },
+        },
+      },
+    },
+  })
+}
+
 export async function buscarAlunoParaBoletim(id: string) {
   return prisma.aluno.findUnique({
     where: { id },
