@@ -1,0 +1,356 @@
+PRD — Escola Online (Prompt Revisado)
+
+---
+1. Visão Geral do Produto
+
+Nome: Escola Online
+Tipo: Aplicação Web — Painel Administrativo Escolar
+Objetivo: Digitalizar e centralizar o controle de notas de alunos, com boletim individual,
+dashboard com visão agregada, ranking de desempenho e alertas automáticos por e-mail.
+
+---
+2. Contexto e Problema
+
+Gestores escolares precisam de um sistema centralizado para registrar matrículas, lançar notas
+e acompanhar o desempenho dos alunos por curso. Substitui planilhas manuais e elimina retrabalho
+na geração de relatórios.
+
+---
+3. Usuários e Papéis
+
+  Administrador — Único perfil ativo. Gerencia alunos, cursos, matrículas e notas.
+  Responsável  — Não acessa o sistema. Recebe alertas por e-mail.
+
+  Autenticação:
+    - NextAuth v5 com Credentials provider (e-mail + senha)
+    - Senha armazenada com bcrypt (nunca exposta via select no Prisma)
+    - Sessão JWT — sem persistência em banco
+    - auth.config.ts separado de auth.ts (edge vs Node.js)
+    - Todas as rotas internas protegidas via middleware.ts
+    - Server Actions protegidas por requireAuth() — lança Error('Não autenticado'),
+      não redireciona (importante para testes unitários)
+
+---
+4. Regras de Negócio
+
+  RN-01  Média aritmética simples das notas lançadas.
+         Implementar como função pura: calcularMedia(valores: number[]): number | null
+         Retorna null quando não há notas (nunca retornar 0 para ausência de dados).
+
+  RN-02  Situação calculada a partir da média:
+           Aprovado    — média >= 7.0
+           Reprovado   — média < 5.0
+           Em Andamento — 5.0 <= média < 7.0, ou null (sem notas)
+         Implementar como: calcularSituacao(media: number | null): Situacao
+         Fronteiras críticas: média exatamente 5.0 é Em Andamento, não Reprovado.
+                              média exatamente 7.0 é Aprovado, não Em Andamento.
+
+  RN-03  Aluno só pode ser matriculado uma vez no mesmo curso.
+         Implementar via @@unique([alunoId, cursoId]) no schema Prisma.
+         A constraint do banco é a fonte de verdade. Capturar erro P2002 e relançar
+         como MatriculaDuplicadaError para que a action trate com mensagem clara.
+
+  RN-04  Ranking considera apenas alunos com ao menos uma nota lançada.
+         Filtrar na query Prisma:
+           where: { matriculas: { some: { notas: { some: {} } } } }
+         calcularMediaGeral como segunda defesa — retorna null se não houver notas.
+
+  Média geral (ranking e boletim): média flat ponderada por quantidade de notas.
+  Usar a mesma função calcularMediaGeral em ambos os lugares para consistência:
+    calcularMediaGeral(matriculas: { notas: { valor: number }[] }[]): number | null
+
+---
+5. Requisitos Funcionais
+
+  RF01 — Cadastro de cursos: nome, descrição, carga horária, instrutor, status (ativo/inativo)
+  RF02 — Cadastro de alunos: nome, e-mail, data de nascimento, foto opcional (Cloudinary)
+  RF03 — Matrícula de aluno em curso com data de início
+  RF04 — Lançamento de notas por módulo/avaliação (0–10, com descrição e data)
+  RF05 — Boletim individual: cursos, notas, média por curso, situação, média geral
+  RF06 — Ranking de alunos com posição ordinal (1º, 2º...), medalha e link para boletim
+  RF07 — Detalhes do curso com alunos matriculados, situações e médias
+  RF08 — Dashboard com métricas: total alunos, cursos ativos, matrículas, média geral da escola
+  RF09 — Exportação PDF do boletim individual (GET /api/boletim/[id])
+  RF10 — Endpoint JSON do ranking (GET /api/ranking)
+  RF11 — Upload de foto de perfil no Cloudinary com rollback se o DB falhar
+  RF12 — Alerta por e-mail via Resend quando nota for lançada
+
+---
+6. Stack Tecnológica
+
+  Framework     Next.js 15+ (App Router, Server Actions, RSC)
+  Linguagem     TypeScript strict (sem any)
+  Banco         PostgreSQL + Prisma ORM + @prisma/adapter-pg
+  Autenticação  NextAuth v5 beta (credentials, JWT)
+  UI            Tailwind CSS v4 (componentes customizados, sem shadcn/ui)
+                clsx + tailwind-merge via cn() para composição de classes
+  Ícones        Lucide React
+  Toasts        Sonner
+  Validação     Zod (schemas + env vars)
+  Formulários   React Hook Form + @hookform/resolvers
+  Upload        Cloudinary v2 (fotoUrl + fotoPublicId para rollback)
+  E-mail        Resend
+  PDF           @react-pdf/renderer (renderToBuffer server-side)
+  CSV           PapaParse
+  Testes        Vitest
+
+  IMPORTANTE: Não usar shadcn/ui. Implementar componentes Tailwind customizados.
+  IMPORTANTE: PostCSS config obrigatória para Tailwind v4:
+    postcss.config.mjs → export default { plugins: { '@tailwindcss/postcss': {} } }
+
+---
+7. Modelo de Dados
+
+  enum Role   { ADMIN }
+  enum Status { ATIVO · INATIVO }
+
+  User
+    id            String  @id @default(cuid())
+    nome          String
+    email         String  @unique
+    senha         String  // hash bcrypt — nunca exposto via select
+    role          Role    @default(ADMIN)
+
+  Aluno
+    id             String      @id @default(cuid())
+    nome           String
+    email          String      @unique
+    dataNascimento DateTime
+    fotoUrl        String?     // URL pública no Cloudinary
+    fotoPublicId   String?     // ID interno para exclusão (rollback)
+    matriculas     Matricula[]
+
+  Curso
+    id           String      @id @default(cuid())
+    nome         String
+    descricao    String
+    cargaHoraria Int
+    instrutor    String
+    status       Status      @default(ATIVO)
+    matriculas   Matricula[]
+
+  Matricula
+    id         String   @id @default(cuid())
+    alunoId    String
+    cursoId    String
+    dataInicio DateTime @default(now())
+    aluno      Aluno    @relation(fields: [alunoId], references: [id], onDelete: Cascade)
+    curso      Curso    @relation(fields: [cursoId], references: [id], onDelete: Cascade)
+    notas      Nota[]
+    @@unique([alunoId, cursoId])   // RN-03
+
+  Nota
+    id          String    @id @default(cuid())
+    matriculaId String
+    descricao   String
+    valor       Float     // 0.0 – 10.0
+    data        DateTime  @default(now())
+    matricula   Matricula @relation(fields: [matriculaId], references: [id], onDelete: Cascade)
+
+---
+8. Arquitetura e Padrões
+
+  Fluxo de dados:
+    Browser
+      → Server Components   (busca direta no Prisma, sem rota API intermediária)
+      → Client Components   ("use client" — filtros, busca, formulários)
+      → Server Actions      ("use server" — mutações: auth + validação + DB)
+      → lib/api/*.ts        (data access layer — queries Prisma isoladas)
+      → PostgreSQL
+
+  Regras de implementação:
+
+  1. SERVER COMPONENTS COMO PADRÃO
+     "use client" apenas em: formulários com estado, filtros em tempo real, modais.
+     Server Components buscam dados direto no Prisma — sem fetch('/api/...') interno.
+
+  2. SERVER ACTIONS — PADRÃO DE RETORNO
+     Todas retornam { success: true } | { error: { campo?: string[]; _form?: string[] } }
+     Nunca usar redirect() nas actions. Formulário chama router.push() no cliente.
+     Nunca retornar void — sempre retornar o objeto de resultado para os testes.
+
+  3. SEGURANÇA
+     requireAuth() como primeira linha de toda action.
+     Validar com Zod (safeParse) antes de qualquer operação de banco.
+     select explícito no Prisma — nunca retornar senha ou campos sensíveis.
+
+  4. FORMULÁRIOS
+     Usar useTransition + router.push para formulários que chamam actions tipadas:
+       const [isPending, startTransition] = useTransition()
+       startTransition(async () => {
+         const result = await minhaAction(data)
+         if (result.success) { router.push('/destino'); return }
+         if (result.error) setErrors(result.error)
+       })
+     Login usa useActionState (integrado com FormData do NextAuth).
+
+  5. QUERIES SEPARADAS POR FINALIDADE
+     Não reutilizar query de listagem em formulário de edição.
+     Criar funções específicas com select mínimo para cada contexto:
+       buscarAlunoParaEdicao — só campos do formulário
+       buscarAlunoParaBoletim — campos + matrículas + notas ordenadas
+       listarAlunosParaRanking — só o necessário para calcular média
+
+  6. CLOUDINARY — ROLLBACK
+     Upload antes de salvar no banco. Se banco falhar: deletar imagem imediatamente.
+     src/lib/cloudinary.ts deve exportar:
+       uploadImagem(fileBase64: string): Promise<{ url: string; publicId: string }>
+       deletarImagemCloudinary(publicId: string): Promise<void>
+
+  7. AUTH SPLIT (EDGE vs NODE.JS)
+     auth.config.ts — só configuração, sem bcrypt ou imports Node.js (usado no middleware)
+     auth.ts — importa auth.config e adiciona Credentials provider com bcrypt
+     middleware.ts — usa NextAuth(authConfig), protege todas as rotas exceto /login e assets
+
+  8. ENV VARS
+     src/lib/env.ts — validar todas com Zod no módulo (não lazy):
+       const envSchema = z.object({
+         DATABASE_URL: z.string().min(1),
+         AUTH_SECRET: z.string().min(1),
+         CLOUDINARY_CLOUD_NAME: z.string().min(1),
+         CLOUDINARY_API_KEY: z.string().min(1),
+         CLOUDINARY_API_SECRET: z.string().min(1),
+         RESEND_API_KEY: z.string().min(1),
+         NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+       })
+       export const env = envSchema.parse(process.env)
+
+  9. TAILWIND v4
+     Não criar tailwind.config.js — desnecessário no v4.
+     Criar postcss.config.mjs:
+       export default { plugins: { '@tailwindcss/postcss': {} } }
+     Usar cn() (clsx + tailwind-merge) para todas as classes dinâmicas.
+
+  10. TESTES
+      Vitest com environment: 'node' e alias @ → ./src.
+      Mockar Prisma via vi.mock('@/lib/prisma').
+      Funções puras (calcularMedia, calcularSituacao) — testar sem mock.
+      Usar "as never" para dados parciais nos mocks do Prisma.
+      Cobrir fronteiras críticas das regras de negócio:
+        - média 0, 4.99, 5.0, 6.99, 7.0, 10
+        - aluno sem matrícula, matrícula sem nota, nota 0 e nota 10
+
+---
+9. Estrutura de Diretórios
+
+  /
+  ├── auth.ts                  # NextAuth — Credentials provider + bcrypt
+  ├── auth.config.ts           # Edge-safe (usado no middleware)
+  ├── middleware.ts            # Proteção de rotas
+  ├── postcss.config.mjs       # Tailwind v4
+  ├── vitest.config.ts         # Testes
+  ├── prisma/
+  │   ├── schema.prisma
+  │   ├── seed.ts
+  │   └── migrations/
+  └── src/
+      ├── actions/             # Server Actions (mutações)
+      │   ├── alunos.ts        # criarAluno · editarAluno
+      │   ├── auth.ts          # loginAction · logoutAction
+      │   ├── cursos.ts        # criarCurso · editarCurso
+      │   ├── matriculas.ts    # criarMatricula · excluirMatriculaAction
+      │   └── notas.ts         # lancarNota · excluirNotaAction
+      ├── app/
+      │   ├── (auth)/login/    # Login com useActionState
+      │   ├── dashboard/       # Métricas agregadas
+      │   ├── ranking/         # Ranking com posição e medalhas
+      │   ├── alunos/
+      │   │   ├── page.tsx     # Lista + busca (Client)
+      │   │   ├── novo/
+      │   │   └── [id]/
+      │   │       ├── page.tsx          # Detalhes + notas
+      │   │       ├── boletim/page.tsx  # Boletim individual
+      │   │       └── editar/
+      │   ├── cursos/
+      │   │   ├── page.tsx     # Lista + filtro de status (Client)
+      │   │   ├── novo/
+      │   │   └── [id]/
+      │   │       ├── page.tsx  # Detalhes + alunos matriculados
+      │   │       └── editar/
+      │   ├── matriculas/
+      │   │   ├── page.tsx     # Lista + filtro por curso (Client)
+      │   │   ├── nova/
+      │   │   └── [id]/notas/nova/
+      │   └── api/
+      │       ├── auth/[...nextauth]/route.ts
+      │       ├── ranking/route.ts        # GET → JSON ranking
+      │       └── boletim/[id]/route.ts   # GET → PDF
+      ├── components/
+      │   ├── alunos/          # AlunoForm (react-hook-form + useTransition)
+      │   ├── cursos/          # CursoForm (react-hook-form + useTransition)
+      │   ├── matriculas/      # MatriculaForm (useTransition)
+      │   ├── notas/           # NotaForm (useTransition)
+      │   └── shared/          # SituacaoBadge
+      ├── lib/
+      │   ├── api/
+      │   │   ├── alunos.ts    # listar · buscar · criar · editar · boletim · ranking
+      │   │   ├── cursos.ts    # listar · buscar · criar · editar
+      │   │   ├── matriculas.ts # listar · criar (RN-03) · excluir · buscarParaLancarNota
+      │   │   └── notas.ts     # listar · lancar · excluir
+      │   ├── auth-guard.ts    # requireAuth()
+      │   ├── cloudinary.ts    # uploadImagem · deletarImagemCloudinary
+      │   ├── env.ts           # Validação de env vars
+      │   ├── prisma.ts        # Singleton do Prisma client
+      │   └── utils/
+      │       ├── notas.ts     # calcularMedia · calcularMediaGeral · calcularSituacao
+      │       └── notas.test.ts
+      └── schemas/
+          ├── aluno.ts
+          ├── curso.ts
+          └── nota.ts
+
+---
+10. Seed
+
+  Criar prisma/seed.ts que popule:
+    - 1 usuário admin: email admin@escolaonline.com, senha admin123 (hash bcrypt)
+    - 4 cursos com status ATIVO
+    - 8 alunos com emails únicos
+    - 16 matrículas distribuídas
+    - Notas variadas para cobrir os três status: Aprovado, Reprovado, Em Andamento
+
+---
+11. Ordem de Implementação Sugerida
+
+  Fase 1 — Base
+    1. Schema Prisma + migration inicial
+    2. src/lib/env.ts + src/lib/prisma.ts
+    3. auth.config.ts + auth.ts + middleware.ts + src/app/(auth)/login/
+    4. src/schemas/ (aluno, curso, nota)
+    5. src/lib/utils/notas.ts + notas.test.ts
+    6. postcss.config.mjs + vitest.config.ts
+
+  Fase 2 — CRUD
+    7. lib/api/cursos.ts → actions/cursos.ts → páginas de cursos
+    8. lib/api/alunos.ts → actions/alunos.ts → páginas de alunos
+    9. lib/api/matriculas.ts → actions/matriculas.ts → páginas de matrículas
+   10. lib/api/notas.ts → actions/notas.ts → páginas de notas
+
+  Fase 3 — Features
+   11. Dashboard com métricas reais
+   12. Boletim individual (/alunos/[id]/boletim)
+   13. Ranking (/ranking) com RN-04
+   14. Testes das RN-01 a RN-04
+
+  Fase 4 — Integrações
+   15. lib/cloudinary.ts + upload na action de aluno (com rollback)
+   16. GET /api/ranking (JSON)
+   17. GET /api/boletim/[id] (PDF com @react-pdf/renderer)
+   18. E-mail via Resend ao lançar nota
+   19. onDelete: Cascade no schema + migration
+
+---
+12. Variáveis de Ambiente Necessárias
+
+  DATABASE_URL         # URL PostgreSQL
+  AUTH_SECRET          # openssl rand -base64 32
+  CLOUDINARY_CLOUD_NAME
+  CLOUDINARY_API_KEY
+  CLOUDINARY_API_SECRET
+  RESEND_API_KEY
+  NODE_ENV             # development | test | production
+
+---
+
+Criar o projeto com estas configurações. Implementar na ordem sugerida, fase por fase.
+Aguardar aprovação do PRD antes de escrever código.
