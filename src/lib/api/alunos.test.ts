@@ -22,7 +22,7 @@ describe('listarAlunosParaRanking (RN-04) — filtro na query', () => {
   })
 
   it('chama o Prisma com where que exige ao menos uma nota', async () => {
-    mockFindMany.mockResolvedValue([])
+    mockFindMany.mockResolvedValue([] as never)
 
     await listarAlunosParaRanking()
 
@@ -44,7 +44,7 @@ describe('listarAlunosParaRanking (RN-04) — filtro na query', () => {
       { id: 'a1', nome: 'Ana', fotoUrl: null, matriculas: [{ notas: [{ valor: 8 }] }] },
       { id: 'a2', nome: 'Bruno', fotoUrl: null, matriculas: [{ notas: [{ valor: 6 }] }] },
     ]
-    mockFindMany.mockResolvedValue(alunosComNota)
+    mockFindMany.mockResolvedValue(alunosComNota as never)
 
     const resultado = await listarAlunosParaRanking()
 
@@ -76,7 +76,7 @@ describe('curso sem alunos — impacto no ranking (RN-04)', () => {
   it('aluno matriculado apenas em cursos sem notas não é retornado pelo banco', async () => {
     // O where garante que o banco só devolve alunos com ao menos uma nota;
     // um curso sem notas lançadas não satisfaz a condição — mock simula esse comportamento
-    mockFindMany.mockResolvedValue([])
+    mockFindMany.mockResolvedValue([] as never)
 
     const resultado = await listarAlunosParaRanking()
 
@@ -94,7 +94,7 @@ describe('curso sem alunos — impacto no ranking (RN-04)', () => {
         { notas: [] },              // curso sem nota (não retornado pelo where, mas pode vir no include)
       ],
     }
-    mockFindMany.mockResolvedValue([aluno])
+    mockFindMany.mockResolvedValue([aluno] as never)
 
     const resultado = await listarAlunosParaRanking()
 

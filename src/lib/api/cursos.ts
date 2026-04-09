@@ -47,6 +47,20 @@ export async function criarCurso(data: CursoFormData) {
   return prisma.curso.create({ data })
 }
 
+export async function buscarCursoParaEdicao(id: string) {
+  return prisma.curso.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      nome: true,
+      descricao: true,
+      cargaHoraria: true,
+      instrutor: true,
+      status: true,
+    },
+  })
+}
+
 export async function editarCurso(id: string, data: CursoFormData) {
   return prisma.curso.update({ where: { id }, data })
 }

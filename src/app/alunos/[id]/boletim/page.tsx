@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { buscarAlunoParaBoletim } from '@/lib/api/alunos'
-import { calcularMedia, calcularSituacao } from '@/lib/utils'
+import { calcularMedia, calcularMediaGeral, calcularSituacao } from '@/lib/utils'
 import { SituacaoBadge } from '@/components/shared/SituacaoBadge'
 
 interface PageProps {
@@ -22,14 +22,8 @@ export default async function BoletimPage({ params }: PageProps) {
   const reprovados = situacoes.filter((s) => s === 'Reprovado').length
   const emAndamento = situacoes.filter((s) => s === 'Em Andamento').length
 
-  // Média geral: média das médias de cada curso (só cursos com ao menos uma nota)
-  const mediasComNota = matriculas
-    .map((m) => calcularMedia(m.notas))
-    .filter((m): m is number => m !== null)
-  const mediaGeral =
-    mediasComNota.length > 0
-      ? mediasComNota.reduce((acc, m) => acc + m, 0) / mediasComNota.length
-      : null
+  // RN-01: média flat ponderada por quantidade de notas — consistente com o ranking
+  const mediaGeral = calcularMediaGeral(matriculas)
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-8">

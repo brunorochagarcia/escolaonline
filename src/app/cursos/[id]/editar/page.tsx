@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { buscarCursoPorId } from '@/lib/api/cursos'
+import { buscarCursoParaEdicao } from '@/lib/api/cursos'
 import { CursoForm } from '@/components/cursos/CursoForm'
 import { editarCursoAction } from '@/actions/cursos'
 
@@ -10,7 +10,7 @@ interface PageProps {
 
 export default async function EditarCursoPage({ params }: PageProps) {
   const { id } = await params
-  const curso = await buscarCursoPorId(id)
+  const curso = await buscarCursoParaEdicao(id)
 
   if (!curso) notFound()
 

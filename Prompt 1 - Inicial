@@ -1,0 +1,227 @@
+ PRD — Escola Online (Prompt Inicial)
+
+  ---
+  1. Visão Geral do Produto
+
+  Nome: Escola Online
+  Tipo: Aplicação Web — Painel Administrativo Escolar
+  Objetivo: Digitalizar e centralizar o controle de notas de alunos, oferecendo registro
+  diário por turma, relatórios individuais exportáveis, dashboard com visão agregada e
+  alertas automáticos e manuais por e-mail aos responsáveis.
+
+  ---
+  2. Contexto e Problema
+
+  Facilitar a adminsitração de cursos e notas de alunos em ambiente online
+
+  ---
+  3. Usuários e Papéis
+
+  ┌───────────────┬─────────────────────────────────────────────────────────────────────┐
+  │     Papel     │                              Descrição                              │
+  ├───────────────┼─────────────────────────────────────────────────────────────────────┤
+  │ Administrador │ Único perfil. Gerencia turmas, alunos, registra notas e relatórios  │
+  ├───────────────┼─────────────────────────────────────────────────────────────────────┤
+  │ Responsável   │ Não acessa o sistema. Recebe alertas por e-mail                     │
+  └───────────────┴─────────────────────────────────────────────────────────────────────┘
+
+  Autenticação via NextAuth com credentials provider. Senha armazenada com bcrypt.
+  JWT session. Todas as rotas internas protegidas via middleware.
+  Modelo de User preparado para suportar múltiplos perfis no futuro (campo role).
+
+  ---
+  4. Regras de Negócio
+
+  ┌────────┬─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │   #    │                                                     Regra                                                                       │
+  ├────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ RN-01  │ Média calculada como média aritmética simples das notas lançadas                                                                │
+  ├────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ RN-02  │ Aprovado: média >= 7.0 | Reprovado: média < 5.0 | Em Andamento: entre 5.0 e 6.9, ou sem notas ainda                             │
+  ├────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ RN-03  │ Aluno só pode ser matriculado uma vez no mesmo curso                                                                            │
+  ├────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ RN-04  │ Ranking só considera alunos com ao menos uma nota lançada                                                                       │
+  └────────┴─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+  ---
+  5. Requisitos Funcionais
+
+    • RF01 — Cadastro de cursos: nome, descrição, carga horária, instrutor, status (ativo/inativo)
+    • RF02 — Cadastro de alunos: nome, email, data de nascimento, foto (opcional)
+    • RF03 — Matrícula de aluno em curso com data de início
+    • RF04 — Lançamento de notas por módulo/avaliação (nota de 0 a 10)
+    • RF05 — Boletim individual do aluno: lista de cursos matriculados, notas por avaliação, média calculada, situação (Aprovado / Em Andamento / Reprovado)
+    • RF06 — Ranking geral: lista de alunos ordenada pela média geral, atualizada a cada nova nota
+    • RF07 — Página de detalhes do curso com lista de alunos matriculados e suas situações
+
+
+  ---
+  7. Stack Tecnológica
+
+  ┌────────────────────┬──────────────────────────────────────────────────────┐
+  │       Camada       │                     Tecnologia                       │
+  ├────────────────────┼──────────────────────────────────────────────────────┤
+  │ Framework          │ Next.js 16+ (App Router, Server Actions, RSC)        │
+  ├────────────────────┼──────────────────────────────────────────────────────┤
+  │ Linguagem          │ TypeScript (strict mode)                              │
+  ├────────────────────┼──────────────────────────────────────────────────────┤
+  │ Banco de Dados     │ PostgreSQL + Prisma ORM (com PrismaPg adapter)       │
+  ├────────────────────┼──────────────────────────────────────────────────────┤
+  │ Autenticação       │ NextAuth v5 beta (credentials provider, JWT)         │
+  ├────────────────────┼──────────────────────────────────────────────────────┤
+  │ UI                 │ Tailwind CSS v4 + shadcn/ui + Lucide icons           │
+  ├────────────────────┼──────────────────────────────────────────────────────┤
+  │ Toasts             │ Sonner                                                │
+  ├────────────────────┼──────────────────────────────────────────────────────┤
+  │ Upload de Fotos    │ Cloudinary (fotoUrl + fotoPublicId para cleanup)     │
+  ├────────────────────┼──────────────────────────────────────────────────────┤
+  │ E-mail             │ Resend                                                │
+  ├────────────────────┼──────────────────────────────────────────────────────┤
+  │ Exportação PDF     │ @react-pdf/renderer (renderToBuffer server-side)     │
+  ├────────────────────┼──────────────────────────────────────────────────────┤
+  │ Exportação CSV     │ PapaParse                                             │
+  ├────────────────────┼──────────────────────────────────────────────────────┤
+  │ Validação          │ Zod (schemas + env vars)                              │
+  └────────────────────┴──────────────────────────────────────────────────────┘
+
+  ---
+  8. Modelo de Dados
+
+    • Curso: id, nome, descrição, cargaHoraria, instrutor, status
+    • Aluno: id, nome, email, dataNascimento, fotoUrl
+    • Matricula: id, alunoId, cursoId, dataInicio
+    • Nota: id, matriculaId, descricao, valor, data
+
+  ---
+  9. Arquitetura e Padrões de Implementação
+
+  Fluxo geral:
+    Navegador
+       ↓ Server Components (busca dados direto no banco, sem API intermediária)
+       ↓ Client Components (interação: toggles, busca, modais, contadores)
+       ↓ Server Actions ("use server" — mutações, validação Zod, revalidatePath)
+       ↓ Prisma ORM
+       ↓ PostgreSQL
+
+  Padrões aplicados:
+  - Mutações via Server Actions. Leitura via RSC (React Server Components).
+  - Listagens com busca/ordenação em Client Component (dados já carregados pelo RSC pai).
+  - Modais para criação e edição de turmas, criação de aluno. Edição de aluno em página dedicada.
+  - Relatório de turma em modal com carregamento sob demanda (server action chamada pelo cliente).
+  - IDs passados para actions via .bind(null, id) — padrão para formulários sem campos hidden.
+  - Exportações via Route Handlers (GET) retornando Buffer com Content-Disposition: attachment.
+  - auth.config.ts (edge-runtime, usado no middleware). auth.ts (Node.js, usado nas server actions).
+  - lib/env.ts valida todas as env vars com Zod no startup.
+  - Paginação via URL query params. Contagem e registros em única transação Prisma.
+
+  ---
+  10. Estrutura de Páginas Inicial
+
+src/
+  app/
+    (auth)/           # Grupo de rotas para Login
+      login/page.tsx
+    dashboard/        # Dashboard principal
+      page.tsx
+    alunos/           # Gestão de alunos
+      page.tsx        # Lista
+      novo/page.tsx   # Formulário (Client)
+      [id]/page.tsx   # Detalhes (Server)
+    cursos/           # Gestão de cursos
+      page.tsx
+
+  
+
+
+
+  11. Schema Prisma Inicial
+
+SCHEMA PRISMA
+
+generator client {
+  provider = "prisma-client-js"
+}
+REVISADO
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+}
+
+enum Status {
+  ATIVO
+  INATIVO
+}
+
+model User {
+  id                String @id @default(cuid())
+  nome          String
+  email          String @unique
+  senha          String
+  role             Role   @default(ADMIN)
+}
+
+model Aluno {
+  id                             String      @id @default(cuid())
+  nome                       String
+  matricula                 String      @unique
+  turmaId                   String
+  dataNasc                 DateTime
+  emailResponsavel   String
+  fotoUrl                     String?
+
+  // Relation field
+  matriculas       Matricula[]
+}
+
+
+model Curso {
+  id                      String      @id @default(cuid())
+  nome                String
+  descricao          String
+  anoLetivo         String
+  cargaHoraria    Int
+  instrutor           String
+  status               Status
+  // Relation field
+  matriculas      Matricula[]
+}
+
+
+model Matricula {
+  id                  String   @id @default(cuid())
+  alunoId         String
+  cursoId         String
+  dataInicio     DateTime @default(now())
+
+  // Relations
+  aluno  Aluno  @relation(fields: [alunoId], references: [id])
+  curso  Curso   @relation(fields: [cursoId], references: [id])
+  notas               Nota[]
+
+  @@unique([alunoId, cursoId]) // evita matricula duplicada
+}
+
+model Nota {
+  id                     String   @id @default(cuid())
+  matriculaId      String
+  descricao     String   
+  valor            Float
+  data              DateTime @default(now())
+
+  // Relation
+  matricula Matricula @relation(fields: [matriculaId], references: [id])
+}
+
+  ---
+
+  Criar o projeto com essas configurações e criar o arquivo PRD. Aguardar aprovação antes de prosseguir.
