@@ -84,3 +84,65 @@ describe('calcularSituacao (RN-02)', () => {
     expect(calcularSituacao([{ valor: 0 }])).toBe('Reprovado')
   })
 })
+
+// ─── Casos de borda: limites absolutos das notas (0 e 10) ───────────────────
+
+describe('limites absolutos de nota (0 e 10)', () => {
+  it('calcularMedia com nota mínima isolada (0) retorna 0, não null', () => {
+    expect(calcularMedia([{ valor: 0 }])).toBe(0)
+  })
+
+  it('calcularMedia com nota máxima isolada (10) retorna 10', () => {
+    expect(calcularMedia([{ valor: 10 }])).toBe(10)
+  })
+
+  it('nota 10 isolada → situação Aprovado', () => {
+    expect(calcularSituacao([{ valor: 10 }])).toBe('Aprovado')
+  })
+
+  it('nota 0 isolada → situação Reprovado', () => {
+    expect(calcularSituacao([{ valor: 0 }])).toBe('Reprovado')
+  })
+
+  it('média exatamente 5.0 via composição de notas → Em Andamento', () => {
+    // (3 + 7) / 2 = 5.0 — deve ser Em Andamento, não Reprovado
+    expect(calcularSituacao([{ valor: 3 }, { valor: 7 }])).toBe('Em Andamento')
+  })
+
+  it('média exatamente 7.0 via composição de notas → Aprovado', () => {
+    // (5 + 9) / 2 = 7.0 — deve ser Aprovado, não Em Andamento
+    expect(calcularSituacao([{ valor: 5 }, { valor: 9 }])).toBe('Aprovado')
+  })
+})
+
+// ─── Casos de borda: aluno sem matrícula ────────────────────────────────────
+
+describe('aluno sem matrícula', () => {
+  it('calcularMediaGeral retorna null', () => {
+    expect(calcularMediaGeral([])).toBeNull()
+  })
+
+  it('calcularSituacao retorna Em Andamento (sem notas para calcular)', () => {
+    expect(calcularSituacao([])).toBe('Em Andamento')
+  })
+})
+
+// ─── Casos de borda: curso sem alunos matriculados ──────────────────────────
+
+describe('curso sem alunos matriculados', () => {
+  it('matrícula existente mas sem notas lançadas → situação Em Andamento', () => {
+    // Representa um aluno matriculado num curso onde nenhuma nota foi lançada ainda
+    expect(calcularSituacao([])).toBe('Em Andamento')
+  })
+
+  it('calcularMediaGeral com todas as matrículas sem nota retorna null', () => {
+    // Dois cursos matriculados, nenhum com nota → sem média
+    expect(calcularMediaGeral([{ notas: [] }, { notas: [] }])).toBeNull()
+  })
+
+  it('calcularMedia de um curso sem notas retorna null (não zero)', () => {
+    // null sinaliza "sem dados", diferente de média zero
+    expect(calcularMedia([])).toBeNull()
+    expect(calcularMedia([])).not.toBe(0)
+  })
+})

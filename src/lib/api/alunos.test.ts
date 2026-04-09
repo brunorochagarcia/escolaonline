@@ -65,3 +65,41 @@ describe('calcularMediaGeral — segunda linha de defesa do RN-04', () => {
     expect(calcularMediaGeral([{ notas: [{ valor: 8 }, { valor: 6 }] }])).toBe(7)
   })
 })
+
+// ─── Casos de borda: curso sem alunos matriculados no ranking ────────────────
+
+describe('curso sem alunos — impacto no ranking (RN-04)', () => {
+  beforeEach(() => {
+    mockFindMany.mockReset()
+  })
+
+  it('aluno matriculado apenas em cursos sem notas não é retornado pelo banco', async () => {
+    // O where garante que o banco só devolve alunos com ao menos uma nota;
+    // um curso sem notas lançadas não satisfaz a condição — mock simula esse comportamento
+    mockFindMany.mockResolvedValue([])
+
+    const resultado = await listarAlunosParaRanking()
+
+    expect(resultado).toHaveLength(0)
+  })
+
+  it('aluno com nota em um curso e matrícula sem nota em outro aparece no ranking', async () => {
+    // Apenas o curso com nota satisfaz o where; o outro curso é ignorado pelo banco
+    const aluno = {
+      id: 'a1',
+      nome: 'Carol',
+      fotoUrl: null,
+      matriculas: [
+        { notas: [{ valor: 9 }] }, // curso com nota
+        { notas: [] },              // curso sem nota (não retornado pelo where, mas pode vir no include)
+      ],
+    }
+    mockFindMany.mockResolvedValue([aluno])
+
+    const resultado = await listarAlunosParaRanking()
+
+    expect(resultado).toHaveLength(1)
+    // Média geral considera apenas a nota existente
+    expect(calcularMediaGeral(resultado[0].matriculas)).toBe(9)
+  })
+})
