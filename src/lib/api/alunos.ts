@@ -63,6 +63,30 @@ export async function criarAluno(data: AlunoFormData) {
   })
 }
 
+export async function buscarAlunoParaBoletim(id: string) {
+  return prisma.aluno.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      nome: true,
+      email: true,
+      dataNascimento: true,
+      matriculas: {
+        select: {
+          id: true,
+          dataInicio: true,
+          curso: { select: { nome: true } },
+          notas: {
+            select: { id: true, descricao: true, valor: true, data: true },
+            orderBy: { data: 'asc' },
+          },
+        },
+        orderBy: { dataInicio: 'asc' },
+      },
+    },
+  })
+}
+
 export async function buscarAlunoParaEdicao(id: string) {
   return prisma.aluno.findUnique({
     where: { id },

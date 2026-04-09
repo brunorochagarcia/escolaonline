@@ -14,14 +14,3 @@ export function calcularSituacao(notas: { valor: number }[]): Situacao {
   if (media < 5.0) return 'Reprovado'
   return 'Em Andamento'
 }
-
-export function situacaoStyle(situacao: Situacao): string {
-  switch (situacao) {
-    case 'Aprovado':
-      return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-    case 'Reprovado':
-      return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-    case 'Em Andamento':
-      return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-  }
-}

@@ -68,12 +68,20 @@ export function AlunosClient({ alunos }: AlunosClientProps) {
                   </td>
                   <td className="px-4 py-3 text-zinc-500">{aluno._count.matriculas}</td>
                   <td className="px-4 py-3 text-right">
-                    <Link
-                      href={`/alunos/${aluno.id}`}
-                      className="text-xs font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
-                    >
-                      Ver detalhes →
-                    </Link>
+                    <div className="flex items-center justify-end gap-4">
+                      <Link
+                        href={`/alunos/${aluno.id}/boletim`}
+                        className="text-xs font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+                      >
+                        Boletim
+                      </Link>
+                      <Link
+                        href={`/alunos/${aluno.id}`}
+                        className="text-xs font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+                      >
+                        Detalhes →
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}

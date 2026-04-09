@@ -2,7 +2,8 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Status } from '@prisma/client'
 import { buscarCursoPorId } from '@/lib/api/cursos'
-import { calcularMedia, calcularSituacao, situacaoStyle, cn } from '@/lib/utils'
+import { calcularMedia, calcularSituacao, cn } from '@/lib/utils'
+import { SituacaoBadge } from '@/components/shared/SituacaoBadge'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -66,6 +67,7 @@ export default async function CursoDetalhesPage({ params }: PageProps) {
                 <th className="px-4 py-3">Notas lançadas</th>
                 <th className="px-4 py-3">Média</th>
                 <th className="px-4 py-3">Situação</th>
+                <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -78,7 +80,14 @@ export default async function CursoDetalhesPage({ params }: PageProps) {
                     key={matricula.id}
                     className="bg-white hover:bg-zinc-50 dark:bg-zinc-900 dark:hover:bg-zinc-800"
                   >
-                    <td className="px-4 py-3 font-medium">{matricula.aluno.nome}</td>
+                    <td className="px-4 py-3 font-medium">
+                      <Link
+                        href={`/alunos/${matricula.alunoId}`}
+                        className="hover:underline"
+                      >
+                        {matricula.aluno.nome}
+                      </Link>
+                    </td>
                     <td className="px-4 py-3 text-zinc-500">
                       {new Date(matricula.dataInicio).toLocaleDateString('pt-BR')}
                     </td>
@@ -87,11 +96,15 @@ export default async function CursoDetalhesPage({ params }: PageProps) {
                       {media !== null ? media.toFixed(1) : '—'}
                     </td>
                     <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${situacaoStyle(situacao)}`}
+                      <SituacaoBadge situacao={situacao} />
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <Link
+                        href={`/alunos/${matricula.alunoId}/boletim`}
+                        className="text-xs font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
                       >
-                        {situacao}
-                      </span>
+                        Boletim →
+                      </Link>
                     </td>
                   </tr>
                 )

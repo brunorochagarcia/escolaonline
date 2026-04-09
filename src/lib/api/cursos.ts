@@ -25,6 +25,7 @@ export async function buscarCursoPorId(id: string) {
       matriculas: {
         select: {
           id: true,
+          alunoId: true,
           dataInicio: true,
           aluno: { select: { nome: true } },
           notas: { select: { valor: true } },
