@@ -100,6 +100,10 @@ describe('curso sem alunos — impacto no ranking (RN-04)', () => {
 
     expect(resultado).toHaveLength(1)
     // Média geral considera apenas a nota existente
-    expect(calcularMediaGeral(resultado[0].matriculas)).toBe(9)
+    expect(
+      calcularMediaGeral(
+        resultado[0].matriculas.map((m) => ({ notas: m.notas.map((n) => ({ valor: Number(n.valor) })) })),
+      ),
+    ).toBe(9)
   })
 })

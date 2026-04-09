@@ -13,7 +13,9 @@ export default async function RankingPage() {
       fotoUrl: aluno.fotoUrl,
       totalNotas: aluno.matriculas.reduce((acc, m) => acc + m.notas.length, 0),
       totalCursos: aluno.matriculas.length,
-      media: calcularMediaGeral(aluno.matriculas),
+      media: calcularMediaGeral(
+        aluno.matriculas.map((m) => ({ notas: m.notas.map((n) => ({ valor: Number(n.valor) })) })),
+      ),
     }))
     .filter((a) => a.media !== null)
     .sort((a, b) => (b.media as number) - (a.media as number))

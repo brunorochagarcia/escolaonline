@@ -41,7 +41,7 @@ export async function lancarNota(
         emailAluno: matricula.aluno.email,
         nomeCurso: matricula.curso.nome,
         descricaoNota: notaCriada.descricao,
-        valorNota: notaCriada.valor,
+        valorNota: Number(notaCriada.valor),
         dataNota: notaCriada.data,
       })
     })

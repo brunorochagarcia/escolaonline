@@ -17,29 +17,29 @@ enum Status {
 
 model User {
   id    String @id @default(cuid())
-  nome  String
-  email String @unique
-  senha String
+  nome  String @db.VarChar(100)
+  email String @unique @db.VarChar(254)
+  senha String @db.Char(60)
   role  Role   @default(ADMIN)
 }
 
 model Aluno {
   id             String      @id @default(cuid())
-  nome           String
-  email          String      @unique
-  dataNascimento DateTime
-  fotoUrl        String?
-  fotoPublicId   String?
+  nome           String      @db.VarChar(100)
+  email          String      @unique @db.VarChar(254)
+  dataNascimento DateTime    @db.Date
+  fotoUrl        String?     @db.VarChar(500)
+  fotoPublicId   String?     @db.VarChar(200)
 
   matriculas     Matricula[]
 }
 
 model Curso {
   id           String      @id @default(cuid())
-  nome         String
-  descricao    String
+  nome         String      @db.VarChar(100)
+  descricao    String      @db.Text
   cargaHoraria Int
-  instrutor    String
+  instrutor    String      @db.VarChar(100)
   status       Status      @default(ATIVO)
 
   matriculas   Matricula[]
@@ -61,8 +61,8 @@ model Matricula {
 model Nota {
   id          String    @id @default(cuid())
   matriculaId String
-  descricao   String
-  valor       Float
+  descricao   String    @db.VarChar(100)
+  valor       Decimal   @db.Decimal(4, 2)
   data        DateTime  @default(now())
 
   matricula   Matricula @relation(fields: [matriculaId], references: [id], onDelete: Cascade)

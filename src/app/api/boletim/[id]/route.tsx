@@ -77,7 +77,9 @@ export async function GET(_req: NextRequest, { params }: RouteProps) {
     return new Response('Aluno não encontrado', { status: 404 })
   }
 
-  const mediaGeral = calcularMediaGeral(aluno.matriculas)
+  const mediaGeral = calcularMediaGeral(
+    aluno.matriculas.map((m) => ({ notas: m.notas.map((n) => ({ valor: Number(n.valor) })) })),
+  )
 
   const buffer = await renderToBuffer(
     <Document>
@@ -111,7 +113,7 @@ export async function GET(_req: NextRequest, { params }: RouteProps) {
         </View>
 
         {aluno.matriculas.map((matricula) => {
-          const media = calcularMedia(matricula.notas.map((n) => n.valor))
+          const media = calcularMedia(matricula.notas.map((n) => Number(n.valor)))
           const situacao = calcularSituacao(media)
 
           return (
