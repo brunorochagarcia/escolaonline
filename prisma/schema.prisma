@@ -51,8 +51,8 @@ model Matricula {
   cursoId    String
   dataInicio DateTime @default(now())
 
-  aluno      Aluno    @relation(fields: [alunoId], references: [id])
-  curso      Curso    @relation(fields: [cursoId], references: [id])
+  aluno      Aluno    @relation(fields: [alunoId], references: [id], onDelete: Cascade)
+  curso      Curso    @relation(fields: [cursoId], references: [id], onDelete: Cascade)
   notas      Nota[]
 
   @@unique([alunoId, cursoId])
@@ -65,5 +65,5 @@ model Nota {
   valor       Float
   data        DateTime  @default(now())
 
-  matricula   Matricula @relation(fields: [matriculaId], references: [id])
+  matricula   Matricula @relation(fields: [matriculaId], references: [id], onDelete: Cascade)
 }

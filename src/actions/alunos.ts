@@ -1,58 +1,95 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
 import { Prisma } from '@prisma/client'
 import { alunoSchema, AlunoFormData } from '@/schemas/aluno'
-import { criarAluno, editarAluno } from '@/lib/api/alunos'
+import { criarAluno as criarAlunoDAL, editarAluno as editarAlunoDAL } from '@/lib/api/alunos'
 import { requireAuth } from '@/lib/auth-guard'
+import { uploadImagem, deletarImagemCloudinary } from '@/lib/cloudinary'
 
-export type AlunoActionResult = {
-  errors?: Partial<Record<keyof AlunoFormData | '_form', string[]>>
-}
+export type AlunoActionResult =
+  | { success: true }
+  | { error: Partial<Record<keyof AlunoFormData | '_form', string[]>> }
 
-export async function criarAlunoAction(formData: unknown): Promise<AlunoActionResult | void> {
+export async function criarAluno(
+  formData: unknown,
+  fotoBase64?: string,
+): Promise<AlunoActionResult> {
   await requireAuth()
 
   const parsed = alunoSchema.safeParse(formData)
   if (!parsed.success) {
-    return { errors: parsed.error.flatten().fieldErrors }
+    return { error: parsed.error.flatten().fieldErrors }
+  }
+
+  let fotoUrl: string | undefined = parsed.data.fotoUrl || undefined
+  let fotoPublicId: string | undefined = parsed.data.fotoPublicId || undefined
+
+  if (fotoBase64) {
+    try {
+      const uploaded = await uploadImagem(fotoBase64)
+      fotoUrl = uploaded.url
+      fotoPublicId = uploaded.publicId
+    } catch {
+      return { error: { _form: ['Erro ao fazer upload da foto. Tente novamente.'] } }
+    }
   }
 
   try {
-    await criarAluno(parsed.data)
+    await criarAlunoDAL({ ...parsed.data, fotoUrl, fotoPublicId })
   } catch (err) {
-    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
-      return { errors: { email: ['E-mail já cadastrado.'] } }
+    // Rollback: se o DB falhar após o upload, deletar imagem para evitar órfão
+    if (fotoPublicId && fotoBase64) {
+      await deletarImagemCloudinary(fotoPublicId).catch(() => {})
     }
-    return { errors: { _form: ['Erro inesperado. Tente novamente.'] } }
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+      return { error: { email: ['E-mail já cadastrado.'] } }
+    }
+    return { error: { _form: ['Erro inesperado. Tente novamente.'] } }
   }
 
   revalidatePath('/alunos')
-  redirect('/alunos')
+  return { success: true }
 }
 
-export async function editarAlunoAction(
+export async function editarAluno(
   id: string,
   formData: unknown,
-): Promise<AlunoActionResult | void> {
+  fotoBase64?: string,
+): Promise<AlunoActionResult> {
   await requireAuth()
 
   const parsed = alunoSchema.safeParse(formData)
   if (!parsed.success) {
-    return { errors: parsed.error.flatten().fieldErrors }
+    return { error: parsed.error.flatten().fieldErrors }
+  }
+
+  let fotoUrl: string | undefined = parsed.data.fotoUrl || undefined
+  let fotoPublicId: string | undefined = parsed.data.fotoPublicId || undefined
+
+  if (fotoBase64) {
+    try {
+      const uploaded = await uploadImagem(fotoBase64)
+      fotoUrl = uploaded.url
+      fotoPublicId = uploaded.publicId
+    } catch {
+      return { error: { _form: ['Erro ao fazer upload da foto. Tente novamente.'] } }
+    }
   }
 
   try {
-    await editarAluno(id, parsed.data)
+    await editarAlunoDAL(id, { ...parsed.data, fotoUrl, fotoPublicId })
   } catch (err) {
-    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
-      return { errors: { email: ['E-mail já cadastrado.'] } }
+    if (fotoPublicId && fotoBase64) {
+      await deletarImagemCloudinary(fotoPublicId).catch(() => {})
     }
-    return { errors: { _form: ['Erro inesperado. Tente novamente.'] } }
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+      return { error: { email: ['E-mail já cadastrado.'] } }
+    }
+    return { error: { _form: ['Erro inesperado. Tente novamente.'] } }
   }
 
   revalidatePath('/alunos')
   revalidatePath(`/alunos/${id}`)
-  redirect('/alunos')
+  return { success: true }
 }

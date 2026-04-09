@@ -1,41 +1,61 @@
 'use client'
 
-import { useActionState } from 'react'
-import { lancarNotaAction, NotaActionState } from '@/actions/notas'
+import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
+import { lancarNota, NotaActionResult } from '@/actions/notas'
 import { cn } from '@/lib/utils'
+
+type FormErrors = Extract<NotaActionResult, { error: unknown }>['error']
 
 interface NotaFormProps {
   matriculaId: string
   alunoId: string
 }
 
-const initialState: NotaActionState = {}
-
 export function NotaForm({ matriculaId, alunoId }: NotaFormProps) {
-  const action = lancarNotaAction.bind(null, matriculaId, alunoId)
-  const [state, formAction, isPending] = useActionState(action, initialState)
+  const [isPending, startTransition] = useTransition()
+  const [errors, setErrors] = useState<FormErrors | null>(null)
+  const router = useRouter()
 
   const hoje = new Date().toISOString().split('T')[0]
 
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const fd = new FormData(e.currentTarget)
+    setErrors(null)
+    startTransition(async () => {
+      const result = await lancarNota(matriculaId, alunoId, {
+        descricao: fd.get('descricao'),
+        valor: fd.get('valor'),
+        data: fd.get('data'),
+      })
+      if ('success' in result) {
+        router.push(`/alunos/${alunoId}`)
+        return
+      }
+      setErrors(result.error)
+    })
+  }
+
   return (
-    <form action={formAction} className="space-y-5">
-      {state.errors?._form && (
+    <form onSubmit={handleSubmit} className="space-y-5">
+      {errors?._form && (
         <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
-          {state.errors._form[0]}
+          {errors._form[0]}
         </div>
       )}
 
-      <Field label="Descrição" error={state.errors?.descricao?.[0]}>
+      <Field label="Descrição" error={errors?.descricao?.[0]}>
         <input
           name="descricao"
           type="text"
           placeholder="Ex: Prova 1, Trabalho Final…"
-          className={inputClass(!!state.errors?.descricao)}
+          className={inputClass(!!errors?.descricao)}
         />
       </Field>
 
       <div className="grid grid-cols-2 gap-4">
-        <Field label="Nota (0–10)" error={state.errors?.valor?.[0]}>
+        <Field label="Nota (0–10)" error={errors?.valor?.[0]}>
           <input
             name="valor"
             type="number"
@@ -43,16 +63,16 @@ export function NotaForm({ matriculaId, alunoId }: NotaFormProps) {
             max="10"
             step="0.1"
             placeholder="Ex: 8.5"
-            className={inputClass(!!state.errors?.valor)}
+            className={inputClass(!!errors?.valor)}
           />
         </Field>
 
-        <Field label="Data" error={state.errors?.data?.[0]}>
+        <Field label="Data" error={errors?.data?.[0]}>
           <input
             name="data"
             type="date"
             defaultValue={hoje}
-            className={inputClass(!!state.errors?.data)}
+            className={inputClass(!!errors?.data)}
           />
         </Field>
       </div>

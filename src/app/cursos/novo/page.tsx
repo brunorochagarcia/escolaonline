@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { CursoForm } from '@/components/cursos/CursoForm'
-import { criarCursoAction } from '@/actions/cursos'
+import { criarCurso } from '@/actions/cursos'
 
 export default function NovoCursoPage() {
   return (
@@ -16,7 +16,7 @@ export default function NovoCursoPage() {
       </div>
 
       <div className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <CursoForm onSubmit={criarCursoAction} submitLabel="Criar curso" />
+        <CursoForm onSubmit={criarCurso} submitLabel="Criar curso" redirectTo="/cursos" />
       </div>
     </main>
   )

@@ -67,9 +67,9 @@ calcularSituacao(media: number | null): 'Aprovado' | 'Reprovado' | 'Em Andamento
 | RF06 | Ranking geral de alunos ordenado por média, com posição ordinal | Concluído |
 | RF07 | Página de detalhes do curso com alunos matriculados e situações | Concluído |
 | RF08 | Dashboard com métricas: total alunos, cursos ativos, matrículas, média geral | Concluído |
-| RF09 | Exportação PDF do boletim individual | Pendente |
-| RF10 | Endpoint JSON do ranking (`GET /api/ranking`) | Pendente |
-| RF11 | Upload de foto de perfil do aluno via Cloudinary | Pendente |
+| RF09 | Exportação PDF do boletim individual | Concluído |
+| RF10 | Endpoint JSON do ranking (`GET /api/ranking`) | Concluído |
+| RF11 | Upload de foto de perfil do aluno via Cloudinary | Pendente (lib criada, sem integração no form) |
 | RF12 | Alerta por e-mail ao responsável quando nota for lançada | Pendente |
 
 ---
@@ -86,7 +86,7 @@ calcularSituacao(media: number | null): 'Aprovado' | 'Reprovado' | 'Em Andamento
 | RNF06 | Compensação de falhas em uploads | Se `criarAluno` falhar após upload no Cloudinary, deletar via `fotoPublicId` |
 | RNF07 | Variáveis de ambiente validadas no startup | `envSchema.parse(process.env)` em `src/lib/env.ts` |
 | RNF08 | Regras de negócio testáveis sem banco | Funções puras em `src/lib/utils/notas.ts`; DAL mockável via `vi.mock` |
-| RNF09 | Cascata referencial no banco | `onDelete: Cascade` a adicionar em Matricula→Aluno, Matricula→Curso, Nota→Matricula |
+| RNF09 | Cascata referencial no banco | `onDelete: Cascade` implementado em Matricula→Aluno, Matricula→Curso, Nota→Matricula |
 
 ---
 
@@ -122,9 +122,9 @@ Aluno       id · nome · email (unique) · dataNascimento · fotoUrl? · fotoPu
 Curso       id · nome · descricao · cargaHoraria · instrutor · status
 Matricula   id · alunoId → Aluno · cursoId → Curso · dataInicio
             @@unique([alunoId, cursoId])
-            onDelete: Cascade (a adicionar)
+            onDelete: Cascade
 Nota        id · matriculaId → Matricula · descricao · valor (0–10) · data
-            onDelete: Cascade (a adicionar)
+            onDelete: Cascade
 ```
 
 **Alterações em relação ao schema original do prompt:**
@@ -184,8 +184,8 @@ Navegador
 | `/matriculas/nova` | Server (form Client) | Nova matrícula | Concluído |
 | `/matriculas/[id]/notas/nova` | Server (form Client) | Lançamento de nota | Concluído |
 | `/ranking` | Server | Ranking de alunos com posição e medalhas | Concluído |
-| `GET /api/ranking` | Route Handler | JSON com ranking por média (RN-04) | Pendente (501) |
-| `GET /api/boletim/[id]` | Route Handler | PDF do boletim individual | Pendente (501) |
+| `GET /api/ranking` | Route Handler | JSON com ranking por média (RN-04) | Concluído |
+| `GET /api/boletim/[id]` | Route Handler | PDF do boletim individual | Concluído |
 
 ---
 

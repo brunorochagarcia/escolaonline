@@ -1,27 +1,30 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { alunoSchema, AlunoFormData } from '@/schemas/aluno'
 import { AlunoActionResult } from '@/actions/alunos'
 import { cn } from '@/lib/utils'
 
-// dataNascimento chega como string YYYY-MM-DD do input[type=date];
-// zod coerce.date converte na hora da validação.
 type AlunoDefaultValues = Partial<Omit<AlunoFormData, 'dataNascimento'>> & {
   dataNascimento?: string
 }
 
 interface AlunoFormProps {
   defaultValues?: AlunoDefaultValues
-  onSubmit: (data: AlunoFormData) => Promise<AlunoActionResult | void>
+  onSubmit: (data: AlunoFormData, fotoBase64?: string) => Promise<AlunoActionResult>
   submitLabel: string
+  redirectTo: string
 }
 
-export function AlunoForm({ defaultValues, onSubmit, submitLabel }: AlunoFormProps) {
+export function AlunoForm({ defaultValues, onSubmit, submitLabel, redirectTo }: AlunoFormProps) {
   const [isPending, startTransition] = useTransition()
   const [formError, setFormError] = useState<string | null>(null)
+  const [fotoBase64, setFotoBase64] = useState<string | null>(null)
+  const [fotoPreview, setFotoPreview] = useState<string | null>(defaultValues?.fotoUrl ?? null)
+  const router = useRouter()
 
   const {
     register,
@@ -33,12 +36,27 @@ export function AlunoForm({ defaultValues, onSubmit, submitLabel }: AlunoFormPro
     defaultValues: defaultValues as Partial<AlunoFormData>,
   })
 
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      const base64 = reader.result as string
+      setFotoBase64(base64)
+      setFotoPreview(base64)
+    }
+    reader.readAsDataURL(file)
+  }
+
   function submit(data: AlunoFormData) {
     setFormError(null)
     startTransition(async () => {
-      const result = await onSubmit(data)
-      if (!result?.errors) return
-      for (const [field, messages] of Object.entries(result.errors)) {
+      const result = await onSubmit(data, fotoBase64 ?? undefined)
+      if ('success' in result) {
+        router.push(redirectTo)
+        return
+      }
+      for (const [field, messages] of Object.entries(result.error)) {
         if (field === '_form') {
           setFormError(messages![0])
         } else {
@@ -81,16 +99,29 @@ export function AlunoForm({ defaultValues, onSubmit, submitLabel }: AlunoFormPro
         />
       </Field>
 
-      <Field label="URL da foto (opcional)" error={errors.fotoUrl?.message}>
-        <input
-          {...register('fotoUrl')}
-          type="url"
-          placeholder="https://exemplo.com/foto.jpg"
-          className={inputClass(!!errors.fotoUrl)}
-        />
+      <Field label="Foto de perfil (opcional)">
+        <div className="flex items-center gap-4">
+          {fotoPreview && (
+            <img
+              src={fotoPreview}
+              alt="Preview da foto"
+              className="h-16 w-16 rounded-full object-cover ring-2 ring-zinc-200 dark:ring-zinc-700"
+            />
+          )}
+          <label className="cursor-pointer rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800">
+            {fotoPreview ? 'Trocar foto' : 'Escolher arquivo'}
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              className="sr-only"
+            />
+          </label>
+        </div>
       </Field>
 
-      {/* Preserva o ID do Cloudinary ao editar sem trocar a foto */}
+      {/* Preserva URL e ID do Cloudinary ao editar sem trocar a foto */}
+      <input type="hidden" {...register('fotoUrl')} />
       <input type="hidden" {...register('fotoPublicId')} />
 
       <div className="flex justify-end gap-3 pt-2">

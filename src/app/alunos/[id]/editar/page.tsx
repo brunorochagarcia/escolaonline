@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { buscarAlunoParaEdicao } from '@/lib/api/alunos'
 import { AlunoForm } from '@/components/alunos/AlunoForm'
-import { editarAlunoAction } from '@/actions/alunos'
+import { editarAluno } from '@/actions/alunos'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -14,7 +14,7 @@ export default async function EditarAlunoPage({ params }: PageProps) {
 
   if (!aluno) notFound()
 
-  const action = editarAlunoAction.bind(null, id)
+  const action = editarAluno.bind(null, id)
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-8">
@@ -39,6 +39,7 @@ export default async function EditarAlunoPage({ params }: PageProps) {
           }}
           onSubmit={action}
           submitLabel="Salvar alterações"
+          redirectTo="/alunos"
         />
       </div>
     </main>

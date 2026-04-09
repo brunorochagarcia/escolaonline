@@ -1,20 +1,24 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { cursoSchema, CursoFormData } from '@/schemas/curso'
+import { CursoActionResult } from '@/actions/cursos'
 import { cn } from '@/lib/utils'
 
 interface CursoFormProps {
   defaultValues?: CursoFormData
-  onSubmit: (data: CursoFormData) => Promise<{ errors?: Record<string, string[]> } | void>
+  onSubmit: (data: CursoFormData) => Promise<CursoActionResult>
   submitLabel: string
+  redirectTo: string
 }
 
-export function CursoForm({ defaultValues, onSubmit, submitLabel }: CursoFormProps) {
+export function CursoForm({ defaultValues, onSubmit, submitLabel, redirectTo }: CursoFormProps) {
   const [isPending, startTransition] = useTransition()
   const [formError, setFormError] = useState<string | null>(null)
+  const router = useRouter()
 
   const {
     register,
@@ -30,12 +34,15 @@ export function CursoForm({ defaultValues, onSubmit, submitLabel }: CursoFormPro
     setFormError(null)
     startTransition(async () => {
       const result = await onSubmit(data)
-      if (!result?.errors) return
-      for (const [field, messages] of Object.entries(result.errors)) {
+      if ('success' in result) {
+        router.push(redirectTo)
+        return
+      }
+      for (const [field, messages] of Object.entries(result.error)) {
         if (field === '_form') {
-          setFormError(messages[0])
+          setFormError(messages![0])
         } else {
-          setError(field as keyof CursoFormData, { message: messages[0] })
+          setError(field as keyof CursoFormData, { message: messages![0] })
         }
       }
     })

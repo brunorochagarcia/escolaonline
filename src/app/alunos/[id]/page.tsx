@@ -44,8 +44,8 @@ export default async function AlunoDetalhesPage({ params }: PageProps) {
       ) : (
         <div className="space-y-4">
           {aluno.matriculas.map((matricula) => {
-            const media = calcularMedia(matricula.notas)
-            const situacao = calcularSituacao(matricula.notas)
+            const media = calcularMedia(matricula.notas.map((n) => n.valor))
+            const situacao = calcularSituacao(media)
 
             return (
               <div

@@ -1,34 +1,55 @@
 'use client'
 
-import { useActionState } from 'react'
-import { criarMatriculaAction, MatriculaActionState } from '@/actions/matriculas'
+import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
+import { criarMatricula, MatriculaActionResult } from '@/actions/matriculas'
 import { cn } from '@/lib/utils'
 
 type Aluno = { id: string; nome: string }
 type Curso = { id: string; nome: string }
+
+type FormErrors = Extract<MatriculaActionResult, { error: unknown }>['error']
 
 interface MatriculaFormProps {
   alunos: Aluno[]
   cursos: Curso[]
 }
 
-const initialState: MatriculaActionState = {}
-
 export function MatriculaForm({ alunos, cursos }: MatriculaFormProps) {
-  const [state, action, isPending] = useActionState(criarMatriculaAction, initialState)
+  const [isPending, startTransition] = useTransition()
+  const [errors, setErrors] = useState<FormErrors | null>(null)
+  const router = useRouter()
 
   const hoje = new Date().toISOString().split('T')[0]
 
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const fd = new FormData(e.currentTarget)
+    setErrors(null)
+    startTransition(async () => {
+      const result = await criarMatricula({
+        alunoId: fd.get('alunoId'),
+        cursoId: fd.get('cursoId'),
+        dataInicio: fd.get('dataInicio'),
+      })
+      if ('success' in result) {
+        router.push('/matriculas')
+        return
+      }
+      setErrors(result.error)
+    })
+  }
+
   return (
-    <form action={action} className="space-y-5">
-      {state.errors?._form && (
+    <form onSubmit={handleSubmit} className="space-y-5">
+      {errors?._form && (
         <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
-          {state.errors._form[0]}
+          {errors._form[0]}
         </div>
       )}
 
-      <Field label="Aluno" error={state.errors?.alunoId?.[0]}>
-        <select name="alunoId" defaultValue="" className={selectClass(!!state.errors?.alunoId)}>
+      <Field label="Aluno" error={errors?.alunoId?.[0]}>
+        <select name="alunoId" defaultValue="" className={selectClass(!!errors?.alunoId)}>
           <option value="" disabled>
             Selecione um aluno…
           </option>
@@ -40,8 +61,8 @@ export function MatriculaForm({ alunos, cursos }: MatriculaFormProps) {
         </select>
       </Field>
 
-      <Field label="Curso" error={state.errors?.cursoId?.[0]}>
-        <select name="cursoId" defaultValue="" className={selectClass(!!state.errors?.cursoId)}>
+      <Field label="Curso" error={errors?.cursoId?.[0]}>
+        <select name="cursoId" defaultValue="" className={selectClass(!!errors?.cursoId)}>
           <option value="" disabled>
             Selecione um curso…
           </option>
@@ -53,12 +74,12 @@ export function MatriculaForm({ alunos, cursos }: MatriculaFormProps) {
         </select>
       </Field>
 
-      <Field label="Data de início" error={state.errors?.dataInicio?.[0]}>
+      <Field label="Data de início" error={errors?.dataInicio?.[0]}>
         <input
           type="date"
           name="dataInicio"
           defaultValue={hoje}
-          className={selectClass(!!state.errors?.dataInicio)}
+          className={selectClass(!!errors?.dataInicio)}
         />
       </Field>
 

@@ -17,7 +17,9 @@ export default async function BoletimPage({ params }: PageProps) {
   const { matriculas } = aluno
 
   // Calcula situação por matrícula para o resumo
-  const situacoes = matriculas.map((m) => calcularSituacao(m.notas))
+  const situacoes = matriculas.map((m) =>
+    calcularSituacao(calcularMedia(m.notas.map((n) => n.valor))),
+  )
   const aprovados = situacoes.filter((s) => s === 'Aprovado').length
   const reprovados = situacoes.filter((s) => s === 'Reprovado').length
   const emAndamento = situacoes.filter((s) => s === 'Em Andamento').length
@@ -67,8 +69,8 @@ export default async function BoletimPage({ params }: PageProps) {
       ) : (
         <div className="space-y-6">
           {matriculas.map((matricula) => {
-            const media = calcularMedia(matricula.notas)
-            const situacao = calcularSituacao(matricula.notas)
+            const media = calcularMedia(matricula.notas.map((n) => n.valor))
+            const situacao = calcularSituacao(media)
 
             return (
               <div

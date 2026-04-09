@@ -1,52 +1,47 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
 import { z } from 'zod'
-import { criarMatricula, excluirMatricula, MatriculaDuplicadaError } from '@/lib/api/matriculas'
+import { revalidatePath } from 'next/cache'
+import {
+  criarMatricula as criarMatriculaDAL,
+  excluirMatricula as excluirMatriculaDAL,
+  MatriculaDuplicadaError,
+} from '@/lib/api/matriculas'
 import { requireAuth } from '@/lib/auth-guard'
 
 const matriculaSchema = z.object({
-  alunoId: z.string().min(1, 'Selecione um aluno'),
-  cursoId: z.string().min(1, 'Selecione um curso'),
+  alunoId: z.string().cuid('Selecione um aluno'),
+  cursoId: z.string().cuid('Selecione um curso'),
   dataInicio: z.coerce.date({ errorMap: () => ({ message: 'Data inválida' }) }),
 })
 
-export type MatriculaActionState = {
-  errors?: { alunoId?: string[]; cursoId?: string[]; dataInicio?: string[]; _form?: string[] }
-}
+export type MatriculaActionResult =
+  | { success: true }
+  | { error: { alunoId?: string[]; cursoId?: string[]; dataInicio?: string[]; _form?: string[] } }
 
-export async function criarMatriculaAction(
-  _prev: MatriculaActionState,
-  formData: FormData,
-): Promise<MatriculaActionState> {
+export async function criarMatricula(formData: unknown): Promise<MatriculaActionResult> {
   await requireAuth()
 
-  const parsed = matriculaSchema.safeParse({
-    alunoId: formData.get('alunoId'),
-    cursoId: formData.get('cursoId'),
-    dataInicio: formData.get('dataInicio'),
-  })
-
+  const parsed = matriculaSchema.safeParse(formData)
   if (!parsed.success) {
-    return { errors: parsed.error.flatten().fieldErrors }
+    return { error: parsed.error.flatten().fieldErrors }
   }
 
   try {
-    await criarMatricula(parsed.data.alunoId, parsed.data.cursoId, parsed.data.dataInicio)
+    await criarMatriculaDAL(parsed.data.alunoId, parsed.data.cursoId, parsed.data.dataInicio)
   } catch (err) {
     if (err instanceof MatriculaDuplicadaError) {
-      return { errors: { _form: [err.message] } }
+      return { error: { _form: [err.message] } }
     }
-    return { errors: { _form: ['Erro inesperado. Tente novamente.'] } }
+    return { error: { _form: ['Erro inesperado. Tente novamente.'] } }
   }
 
   revalidatePath('/matriculas')
-  redirect('/matriculas')
+  return { success: true }
 }
 
-export async function excluirMatriculaAction(id: string) {
+export async function excluirMatricula(id: string) {
   await requireAuth()
-  await excluirMatricula(id)
+  await excluirMatriculaDAL(id)
   revalidatePath('/matriculas')
 }

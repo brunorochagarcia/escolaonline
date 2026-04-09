@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { buscarCursoParaEdicao } from '@/lib/api/cursos'
 import { CursoForm } from '@/components/cursos/CursoForm'
-import { editarCursoAction } from '@/actions/cursos'
+import { editarCurso } from '@/actions/cursos'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -14,7 +14,7 @@ export default async function EditarCursoPage({ params }: PageProps) {
 
   if (!curso) notFound()
 
-  const action = editarCursoAction.bind(null, id)
+  const action = editarCurso.bind(null, id)
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-8">
@@ -39,6 +39,7 @@ export default async function EditarCursoPage({ params }: PageProps) {
           }}
           onSubmit={action}
           submitLabel="Salvar alterações"
+          redirectTo="/cursos"
         />
       </div>
     </main>

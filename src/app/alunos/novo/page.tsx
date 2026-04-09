@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { AlunoForm } from '@/components/alunos/AlunoForm'
-import { criarAlunoAction } from '@/actions/alunos'
+import { criarAluno } from '@/actions/alunos'
 
 export default function NovoAlunoPage() {
   return (
@@ -16,7 +16,7 @@ export default function NovoAlunoPage() {
       </div>
 
       <div className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <AlunoForm onSubmit={criarAlunoAction} submitLabel="Criar aluno" />
+        <AlunoForm onSubmit={criarAluno} submitLabel="Criar aluno" redirectTo="/alunos" />
       </div>
     </main>
   )

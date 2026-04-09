@@ -72,8 +72,8 @@ export default async function CursoDetalhesPage({ params }: PageProps) {
             </thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
               {curso.matriculas.map((matricula) => {
-                const media = calcularMedia(matricula.notas)
-                const situacao = calcularSituacao(matricula.notas)
+                const media = calcularMedia(matricula.notas.map((n) => n.valor))
+                const situacao = calcularSituacao(media)
 
                 return (
                   <tr

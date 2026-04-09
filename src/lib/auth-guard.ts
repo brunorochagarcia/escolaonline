@@ -1,8 +1,7 @@
-import { auth } from '../../auth'
-import { redirect } from 'next/navigation'
+import { auth } from '@/lib/auth'
 
 export async function requireAuth() {
   const session = await auth()
-  if (!session?.user) redirect('/login')
+  if (!session?.user) throw new Error('Não autenticado')
   return session
 }

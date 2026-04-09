@@ -42,23 +42,18 @@ export async function criarMatricula(alunoId: string, cursoId: string, dataInici
   }
 }
 
-// Notas não têm onDelete: Cascade no schema, então a exclusão deve ser
-// feita em transação: primeiro as notas, depois a matrícula.
 export async function buscarMatriculaParaLancarNota(id: string) {
   return prisma.matricula.findUnique({
     where: { id },
     select: {
       id: true,
       alunoId: true,
-      aluno: { select: { nome: true } },
+      aluno: { select: { nome: true, email: true } },
       curso: { select: { nome: true } },
     },
   })
 }
 
 export async function excluirMatricula(id: string) {
-  return prisma.$transaction([
-    prisma.nota.deleteMany({ where: { matriculaId: id } }),
-    prisma.matricula.delete({ where: { id } }),
-  ])
+  return prisma.matricula.delete({ where: { id } })
 }

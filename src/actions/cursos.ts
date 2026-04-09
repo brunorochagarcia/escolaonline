@@ -1,51 +1,54 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
 import { Prisma } from '@prisma/client'
-import { cursoSchema } from '@/schemas/curso'
-import { criarCurso, editarCurso } from '@/lib/api/cursos'
+import { cursoSchema, CursoFormData } from '@/schemas/curso'
+import { criarCurso as criarCursoDAL, editarCurso as editarCursoDAL } from '@/lib/api/cursos'
 import { requireAuth } from '@/lib/auth-guard'
 
-export async function criarCursoAction(formData: unknown) {
+export type CursoActionResult =
+  | { success: true }
+  | { error: Partial<Record<keyof CursoFormData | '_form', string[]>> }
+
+export async function criarCurso(formData: unknown): Promise<CursoActionResult> {
   await requireAuth()
 
   const parsed = cursoSchema.safeParse(formData)
   if (!parsed.success) {
-    return { errors: parsed.error.flatten().fieldErrors }
+    return { error: parsed.error.flatten().fieldErrors }
   }
 
   try {
-    await criarCurso(parsed.data)
+    await criarCursoDAL(parsed.data)
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
-      return { errors: { nome: ['Já existe um curso com este nome.'] } }
+      return { error: { nome: ['Já existe um curso com este nome.'] } }
     }
-    return { errors: { _form: ['Erro inesperado. Tente novamente.'] } }
+    return { error: { _form: ['Erro inesperado. Tente novamente.'] } }
   }
 
   revalidatePath('/cursos')
-  redirect('/cursos')
+  return { success: true }
 }
 
-export async function editarCursoAction(id: string, formData: unknown) {
+export async function editarCurso(id: string, formData: unknown): Promise<CursoActionResult> {
   await requireAuth()
 
   const parsed = cursoSchema.safeParse(formData)
   if (!parsed.success) {
-    return { errors: parsed.error.flatten().fieldErrors }
+    return { error: parsed.error.flatten().fieldErrors }
   }
 
   try {
-    await editarCurso(id, parsed.data)
+    await editarCursoDAL(id, parsed.data)
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
-      return { errors: { nome: ['Já existe um curso com este nome.'] } }
+      return { error: { nome: ['Já existe um curso com este nome.'] } }
     }
-    return { errors: { _form: ['Erro inesperado. Tente novamente.'] } }
+    return { error: { _form: ['Erro inesperado. Tente novamente.'] } }
   }
 
   revalidatePath('/cursos')
   revalidatePath(`/cursos/${id}`)
-  redirect('/cursos')
+  return { success: true }
 }
