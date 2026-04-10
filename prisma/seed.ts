@@ -5,284 +5,243 @@ import bcrypt from 'bcryptjs'
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! })
 const prisma = new PrismaClient({ adapter })
 
+// ── PRNG determinístico (Mulberry32) ─────────────────────────────────────────
+function makePRNG(seed: number) {
+  return function () {
+    seed = (seed + 0x6d2b79f5) | 0
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+const rng = makePRNG(42)
+const rand = () => rng()
+const randInt = (min: number, max: number) => Math.floor(rand() * (max - min + 1)) + min
+const randFloat = (min: number, max: number) => parseFloat((rand() * (max - min) + min).toFixed(2))
+const pick = <T>(arr: T[]) => arr[Math.floor(rand() * arr.length)]
+
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
+function addDays(date: Date, days: number): Date {
+  const d = new Date(date)
+  d.setDate(d.getDate() + days)
+  return d
+}
+
+// ── Dados base ────────────────────────────────────────────────────────────────
+const PRIMEIROS_NOMES = [
+  'Ana', 'Bruno', 'Carla', 'Diego', 'Elisa', 'Felipe', 'Gabriela', 'Hugo',
+  'Isabela', 'João', 'Karla', 'Lucas', 'Mariana', 'Nicolas', 'Olivia', 'Pedro',
+  'Quézia', 'Rafael', 'Sabrina', 'Thiago', 'Ursula', 'Victor', 'Wanda', 'Xavier',
+  'Yasmin', 'Zé',
+]
+
+const SOBRENOMES = [
+  'Alves', 'Barbosa', 'Cardoso', 'Castro', 'Costa', 'Cruz', 'Dias', 'Ferreira',
+  'Gomes', 'Lima', 'Lopes', 'Martins', 'Medeiros', 'Melo', 'Miranda', 'Moraes',
+  'Moreira', 'Nascimento', 'Nunes', 'Oliveira', 'Pereira', 'Pinto', 'Reis', 'Ribeiro',
+  'Rocha', 'Rodrigues', 'Santos', 'Silva', 'Sousa', 'Souza', 'Teixeira', 'Torres',
+]
+
+const DESCRICOES_NOTAS = [
+  'Prova 1', 'Prova 2', 'Prova 3', 'Prova Final',
+  'Trabalho Final', 'Projeto', 'Atividade 1', 'Atividade 2',
+  'Seminário', 'Apresentação', 'Exercício Prático',
+]
+
+const CURSOS_DATA = [
+  { nome: 'Desenvolvimento Web Full Stack', descricao: 'HTML, CSS, JavaScript, React e Node.js do zero ao avançado.', cargaHoraria: 120, instrutor: 'Rafael Mendes', status: Status.ATIVO },
+  { nome: 'Python para Dados', descricao: 'Introdução a Python com foco em análise de dados, Pandas e visualização.', cargaHoraria: 80, instrutor: 'Camila Rocha', status: Status.ATIVO },
+  { nome: 'UX/UI Design', descricao: 'Fundamentos de design de interfaces, prototipação e usabilidade.', cargaHoraria: 60, instrutor: 'Fernanda Lima', status: Status.ATIVO },
+  { nome: 'Banco de Dados Relacional', descricao: 'SQL avançado, modelagem relacional, índices e otimização de queries.', cargaHoraria: 40, instrutor: 'Marcos Oliveira', status: Status.INATIVO },
+  { nome: 'Machine Learning com Python', descricao: 'Algoritmos de aprendizado supervisionado e não supervisionado com scikit-learn.', cargaHoraria: 100, instrutor: 'Beatriz Souza', status: Status.ATIVO },
+  { nome: 'DevOps e Cloud', descricao: 'Docker, Kubernetes, CI/CD e serviços AWS para times de desenvolvimento.', cargaHoraria: 90, instrutor: 'André Figueiredo', status: Status.ATIVO },
+  { nome: 'Mobile com React Native', descricao: 'Desenvolvimento de apps iOS e Android com React Native e Expo.', cargaHoraria: 80, instrutor: 'Juliana Pires', status: Status.ATIVO },
+  { nome: 'Segurança da Informação', descricao: 'Criptografia, OWASP Top 10, pentest e boas práticas de segurança.', cargaHoraria: 70, instrutor: 'Carlos Ventura', status: Status.ATIVO },
+  { nome: 'Gestão de Projetos Ágeis', descricao: 'Scrum, Kanban, OKRs e ferramentas para equipes de alto desempenho.', cargaHoraria: 50, instrutor: 'Letícia Campos', status: Status.ATIVO },
+  { nome: 'Inteligência Artificial Aplicada', descricao: 'LLMs, embeddings, RAG e integração de IA em produtos reais.', cargaHoraria: 110, instrutor: 'Roberto Azevedo', status: Status.INATIVO },
+]
+
+// ── Main ──────────────────────────────────────────────────────────────────────
 async function main() {
   console.log('🌱 Iniciando seed...')
 
-  // Limpeza na ordem correta (respeitando foreign keys)
   await prisma.nota.deleteMany()
   await prisma.matricula.deleteMany()
   await prisma.aluno.deleteMany()
   await prisma.curso.deleteMany()
   await prisma.user.deleteMany()
 
-  // -------------------------
-  // Admin
-  // -------------------------
+  // Usuários de teste — criados sequencialmente para obter o id do professor
   await prisma.user.create({
     data: {
       nome: 'Administrador',
-      email: 'admin@escolaonline.com',
+      email: 'admin@escolaonline.com.br',
       senha: await bcrypt.hash('admin123', 10),
+      role: 'ADMIN',
     },
   })
 
-  // -------------------------
-  // Cursos
-  // -------------------------
-  const [webFullStack, pythonDados, uxUi, bancoDados] = await Promise.all([
-    prisma.curso.create({
-      data: {
-        nome: 'Desenvolvimento Web Full Stack',
-        descricao: 'Aprenda HTML, CSS, JavaScript, React e Node.js do zero ao avançado.',
-        cargaHoraria: 120,
-        instrutor: 'Rafael Mendes',
-        status: Status.ATIVO,
-      },
-    }),
-    prisma.curso.create({
-      data: {
-        nome: 'Python para Dados',
-        descricao: 'Introdução a Python com foco em análise de dados, Pandas e visualização.',
-        cargaHoraria: 80,
-        instrutor: 'Camila Rocha',
-        status: Status.ATIVO,
-      },
-    }),
-    prisma.curso.create({
-      data: {
-        nome: 'UX/UI Design',
-        descricao: 'Fundamentos de design de interfaces, prototipação e usabilidade.',
-        cargaHoraria: 60,
-        instrutor: 'Fernanda Lima',
-        status: Status.ATIVO,
-      },
-    }),
-    prisma.curso.create({
-      data: {
-        nome: 'Banco de Dados Relacional',
-        descricao: 'SQL avançado, modelagem relacional, índices e otimização de queries.',
-        cargaHoraria: 40,
-        instrutor: 'Marcos Oliveira',
-        status: Status.INATIVO,
-      },
-    }),
-  ])
+  const professor = await prisma.user.create({
+    data: {
+      nome: 'Carlos Ventura',
+      email: 'carlosventura@escolaonline.com.br',
+      senha: await bcrypt.hash('carlos123', 10),
+      role: 'PROFESSOR',
+    },
+  })
 
-  // -------------------------
-  // Alunos
-  // -------------------------
-  const [ana, bruno, carla, diego, elisa, felipe, gabriela, hugo] = await Promise.all([
-    prisma.aluno.create({
-      data: { nome: 'Ana Paula Ferreira', email: 'ana.ferreira@email.com', dataNascimento: new Date('2000-03-15') },
-    }),
-    prisma.aluno.create({
-      data: { nome: 'Bruno Costa', email: 'bruno.costa@email.com', dataNascimento: new Date('1998-07-22') },
-    }),
-    prisma.aluno.create({
-      data: { nome: 'Carla Souza', email: 'carla.souza@email.com', dataNascimento: new Date('2001-11-08') },
-    }),
-    prisma.aluno.create({
-      data: { nome: 'Diego Martins', email: 'diego.martins@email.com', dataNascimento: new Date('1999-05-30') },
-    }),
-    prisma.aluno.create({
-      data: { nome: 'Elisa Nunes', email: 'elisa.nunes@email.com', dataNascimento: new Date('2002-01-19') },
-    }),
-    prisma.aluno.create({
-      data: { nome: 'Felipe Alves', email: 'felipe.alves@email.com', dataNascimento: new Date('1997-09-04') },
-    }),
-    prisma.aluno.create({
-      data: { nome: 'Gabriela Lima', email: 'gabriela.lima@email.com', dataNascimento: new Date('2000-12-27') },
-    }),
-    prisma.aluno.create({
-      data: { nome: 'Hugo Pereira', email: 'hugo.pereira@email.com', dataNascimento: new Date('1996-06-13') },
-    }),
-  ])
+  await prisma.user.create({
+    data: {
+      nome: 'Maria Souza',
+      email: 'mariasouza@escolaonline.com.br',
+      senha: await bcrypt.hash('maria123', 10),
+      role: 'ALUNO',
+    },
+  })
 
-  // -------------------------
+  // Cursos — "Segurança da Informação" pertence ao professor de teste
+  const cursos = await Promise.all(
+    CURSOS_DATA.map((d) =>
+      prisma.curso.create({
+        data: {
+          ...d,
+          instrutorId: d.instrutor === 'Carlos Ventura' ? professor.id : null,
+        },
+      }),
+    ),
+  )
+  console.log(`   ✓ ${cursos.length} cursos criados`)
+
+  // ── Perfis de teste vinculados aos logins ─────────────────────────────────────
+
+  // Perfil Aluno: mesmo e-mail do login → permite "editar próprio perfil"
+  const alunoTeste = await prisma.aluno.create({
+    data: {
+      nome: 'Maria Souza',
+      email: 'mariasouza@escolaonline.com.br',
+      dataNascimento: new Date('2000-03-15'),
+    },
+  })
+
+  // Perfil Professor: aluno no sistema também (para aparecer no ranking/boletim)
+  const professorAluno = await prisma.aluno.create({
+    data: {
+      nome: 'Carlos Ventura',
+      email: 'carlosventura@escolaonline.com.br',
+      dataNascimento: new Date('1985-07-22'),
+    },
+  })
+
+  // Matrículas e notas fixas para os perfis de teste
+  const cursoSeguranca = cursos.find((c) => c.instrutor === 'Carlos Ventura')!
+  const cursoWeb       = cursos.find((c) => c.nome.includes('Web'))!
+
+  // Maria Souza — matriculada em Segurança e Web com notas variadas
+  for (const [curso, notas] of [
+    [cursoSeguranca, [{ descricao: 'Prova 1', valor: 8.5 }, { descricao: 'Prova 2', valor: 7.0 }, { descricao: 'Projeto', valor: 9.0 }]],
+    [cursoWeb,       [{ descricao: 'Prova 1', valor: 6.5 }, { descricao: 'Trabalho Final', valor: 8.0 }]],
+  ] as const) {
+    const matricula = await prisma.matricula.create({
+      data: { alunoId: alunoTeste.id, cursoId: curso.id, dataInicio: new Date('2024-02-01') },
+    })
+    await prisma.nota.createMany({
+      data: notas.map((n, i) => ({
+        matriculaId: matricula.id,
+        descricao: n.descricao,
+        valor: n.valor,
+        data: addDays(new Date('2024-02-01'), 30 + i * 30),
+      })),
+    })
+  }
+
+  // Carlos Ventura — matriculado em Web e Python (como aluno)
+  for (const [curso, notas] of [
+    [cursoWeb, [{ descricao: 'Prova Final', valor: 9.5 }, { descricao: 'Seminário', valor: 8.8 }]],
+    [cursos.find((c) => c.nome.includes('Python'))!, [{ descricao: 'Atividade 1', valor: 7.5 }]],
+  ] as const) {
+    const matricula = await prisma.matricula.create({
+      data: { alunoId: professorAluno.id, cursoId: curso.id, dataInicio: new Date('2023-08-01') },
+    })
+    await prisma.nota.createMany({
+      data: notas.map((n, i) => ({
+        matriculaId: matricula.id,
+        descricao: n.descricao,
+        valor: n.valor,
+        data: addDays(new Date('2023-08-01'), 30 + i * 30),
+      })),
+    })
+  }
+
+  console.log('   ✓ perfis de teste vinculados (Maria Souza · Carlos Ventura)')
+
+  // Alunos (100)
+  const alunosData = Array.from({ length: 100 }, (_, i) => {
+    const nome = `${pick(PRIMEIROS_NOMES)} ${pick(SOBRENOMES)}`
+    const slug = nome
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, '.')
+    const anoNasc = randInt(1985, 2005)
+    const mesNasc = randInt(1, 12)
+    const diaNasc = randInt(1, 28)
+    return {
+      nome,
+      email: `${slug}.${i + 1}@email.com`,
+      dataNascimento: new Date(`${anoNasc}-${String(mesNasc).padStart(2, '0')}-${String(diaNasc).padStart(2, '0')}`),
+    }
+  })
+
+  const alunos = await Promise.all(alunosData.map((d) => prisma.aluno.create({ data: d })))
+  console.log(`   ✓ ${alunos.length} alunos criados`)
+
   // Matrículas e Notas
-  // -------------------------
+  let totalMatriculas = 0
+  let totalNotas = 0
 
-  // Ana — Web Full Stack (Aprovada: média 8.5)
-  const mAnaWeb = await prisma.matricula.create({
-    data: { alunoId: ana.id, cursoId: webFullStack.id, dataInicio: new Date('2024-02-01') },
-  })
-  await prisma.nota.createMany({
-    data: [
-      { matriculaId: mAnaWeb.id, descricao: 'Prova 1', valor: 8.5, data: new Date('2024-03-10') },
-      { matriculaId: mAnaWeb.id, descricao: 'Prova 2', valor: 9.0, data: new Date('2024-04-15') },
-      { matriculaId: mAnaWeb.id, descricao: 'Trabalho Final', valor: 8.0, data: new Date('2024-06-20') },
-    ],
-  })
+  for (const aluno of alunos) {
+    const qtdCursos = randInt(1, 4)
+    const cursosSelecionados = shuffle(cursos).slice(0, qtdCursos)
 
-  // Ana — Python para Dados (Em andamento: média 6.2)
-  const mAnaPython = await prisma.matricula.create({
-    data: { alunoId: ana.id, cursoId: pythonDados.id, dataInicio: new Date('2024-08-01') },
-  })
-  await prisma.nota.createMany({
-    data: [
-      { matriculaId: mAnaPython.id, descricao: 'Prova 1', valor: 6.0, data: new Date('2024-09-10') },
-      { matriculaId: mAnaPython.id, descricao: 'Prova 2', valor: 6.5, data: new Date('2024-10-15') },
-    ],
-  })
+    for (const curso of cursosSelecionados) {
+      const anoInicio = randInt(2023, 2024)
+      const mesInicio = randInt(1, 10)
+      const dataInicio = new Date(`${anoInicio}-${String(mesInicio).padStart(2, '0')}-01`)
 
-  // Bruno — Web Full Stack (Reprovado: média 4.3)
-  const mBrunoWeb = await prisma.matricula.create({
-    data: { alunoId: bruno.id, cursoId: webFullStack.id, dataInicio: new Date('2024-02-01') },
-  })
-  await prisma.nota.createMany({
-    data: [
-      { matriculaId: mBrunoWeb.id, descricao: 'Prova 1', valor: 4.0, data: new Date('2024-03-10') },
-      { matriculaId: mBrunoWeb.id, descricao: 'Prova 2', valor: 3.5, data: new Date('2024-04-15') },
-      { matriculaId: mBrunoWeb.id, descricao: 'Trabalho Final', valor: 5.5, data: new Date('2024-06-20') },
-    ],
-  })
+      const matricula = await prisma.matricula.create({
+        data: { alunoId: aluno.id, cursoId: curso.id, dataInicio },
+      })
+      totalMatriculas++
 
-  // Bruno — UX/UI Design (Aprovado: média 7.8)
-  const mBrunoUx = await prisma.matricula.create({
-    data: { alunoId: bruno.id, cursoId: uxUi.id, dataInicio: new Date('2024-05-01') },
-  })
-  await prisma.nota.createMany({
-    data: [
-      { matriculaId: mBrunoUx.id, descricao: 'Projeto 1', valor: 7.5, data: new Date('2024-06-05') },
-      { matriculaId: mBrunoUx.id, descricao: 'Projeto 2', valor: 8.0, data: new Date('2024-07-10') },
-      { matriculaId: mBrunoUx.id, descricao: 'Apresentação Final', valor: 8.0, data: new Date('2024-08-01') },
-    ],
-  })
+      // 15% das matrículas ficam sem nota (recém inscritos)
+      if (rand() < 0.15) continue
 
-  // Carla — Python para Dados (Aprovada: média 9.2)
-  const mCarlaPython = await prisma.matricula.create({
-    data: { alunoId: carla.id, cursoId: pythonDados.id, dataInicio: new Date('2024-03-01') },
-  })
-  await prisma.nota.createMany({
-    data: [
-      { matriculaId: mCarlaPython.id, descricao: 'Prova 1', valor: 9.5, data: new Date('2024-04-10') },
-      { matriculaId: mCarlaPython.id, descricao: 'Prova 2', valor: 9.0, data: new Date('2024-05-15') },
-      { matriculaId: mCarlaPython.id, descricao: 'Projeto Final', valor: 9.0, data: new Date('2024-07-01') },
-    ],
-  })
+      const qtdNotas = randInt(1, 4)
+      const descricoesUsadas = shuffle(DESCRICOES_NOTAS).slice(0, qtdNotas)
 
-  // Carla — Banco de Dados (Em andamento: média 5.5)
-  const mCarlaDB = await prisma.matricula.create({
-    data: { alunoId: carla.id, cursoId: bancoDados.id, dataInicio: new Date('2024-09-01') },
-  })
-  await prisma.nota.createMany({
-    data: [
-      { matriculaId: mCarlaDB.id, descricao: 'Prova 1', valor: 5.5, data: new Date('2024-10-10') },
-    ],
-  })
+      const notasData = descricoesUsadas.map((descricao, idx) => ({
+        matriculaId: matricula.id,
+        descricao,
+        valor: randFloat(2.0, 10.0),
+        data: addDays(dataInicio, randInt(30 + idx * 30, 60 + idx * 40)),
+      }))
 
-  // Diego — UX/UI Design (Reprovado: média 3.8)
-  const mDiegoUx = await prisma.matricula.create({
-    data: { alunoId: diego.id, cursoId: uxUi.id, dataInicio: new Date('2024-05-01') },
-  })
-  await prisma.nota.createMany({
-    data: [
-      { matriculaId: mDiegoUx.id, descricao: 'Projeto 1', valor: 4.0, data: new Date('2024-06-05') },
-      { matriculaId: mDiegoUx.id, descricao: 'Projeto 2', valor: 3.5, data: new Date('2024-07-10') },
-      { matriculaId: mDiegoUx.id, descricao: 'Apresentação Final', valor: 4.0, data: new Date('2024-08-01') },
-    ],
-  })
+      await prisma.nota.createMany({ data: notasData })
+      totalNotas += notasData.length
+    }
+  }
 
-  // Diego — Web Full Stack (Aprovado: média 7.2)
-  const mDiegoWeb = await prisma.matricula.create({
-    data: { alunoId: diego.id, cursoId: webFullStack.id, dataInicio: new Date('2024-02-01') },
-  })
-  await prisma.nota.createMany({
-    data: [
-      { matriculaId: mDiegoWeb.id, descricao: 'Prova 1', valor: 7.0, data: new Date('2024-03-10') },
-      { matriculaId: mDiegoWeb.id, descricao: 'Prova 2', valor: 7.5, data: new Date('2024-04-15') },
-      { matriculaId: mDiegoWeb.id, descricao: 'Trabalho Final', valor: 7.0, data: new Date('2024-06-20') },
-    ],
-  })
-
-  // Elisa — Python para Dados (sem notas — Em andamento)
-  await prisma.matricula.create({
-    data: { alunoId: elisa.id, cursoId: pythonDados.id, dataInicio: new Date('2024-11-01') },
-  })
-
-  // Elisa — UX/UI Design (Aprovada: média 8.0)
-  const mElisaUx = await prisma.matricula.create({
-    data: { alunoId: elisa.id, cursoId: uxUi.id, dataInicio: new Date('2024-05-01') },
-  })
-  await prisma.nota.createMany({
-    data: [
-      { matriculaId: mElisaUx.id, descricao: 'Projeto 1', valor: 8.0, data: new Date('2024-06-05') },
-      { matriculaId: mElisaUx.id, descricao: 'Projeto 2', valor: 8.5, data: new Date('2024-07-10') },
-      { matriculaId: mElisaUx.id, descricao: 'Apresentação Final', valor: 7.5, data: new Date('2024-08-01') },
-    ],
-  })
-
-  // Felipe — Banco de Dados (Aprovado: média 7.5)
-  const mFelipeDB = await prisma.matricula.create({
-    data: { alunoId: felipe.id, cursoId: bancoDados.id, dataInicio: new Date('2024-03-01') },
-  })
-  await prisma.nota.createMany({
-    data: [
-      { matriculaId: mFelipeDB.id, descricao: 'Prova 1', valor: 7.0, data: new Date('2024-04-10') },
-      { matriculaId: mFelipeDB.id, descricao: 'Prova 2', valor: 8.0, data: new Date('2024-05-15') },
-      { matriculaId: mFelipeDB.id, descricao: 'Projeto Final', valor: 7.5, data: new Date('2024-07-01') },
-    ],
-  })
-
-  // Felipe — Web Full Stack (Em andamento: média 6.0)
-  const mFelipeWeb = await prisma.matricula.create({
-    data: { alunoId: felipe.id, cursoId: webFullStack.id, dataInicio: new Date('2024-08-01') },
-  })
-  await prisma.nota.createMany({
-    data: [
-      { matriculaId: mFelipeWeb.id, descricao: 'Prova 1', valor: 6.0, data: new Date('2024-09-10') },
-    ],
-  })
-
-  // Gabriela — Web Full Stack (Aprovada: média 10.0)
-  const mGabrielaWeb = await prisma.matricula.create({
-    data: { alunoId: gabriela.id, cursoId: webFullStack.id, dataInicio: new Date('2024-02-01') },
-  })
-  await prisma.nota.createMany({
-    data: [
-      { matriculaId: mGabrielaWeb.id, descricao: 'Prova 1', valor: 10.0, data: new Date('2024-03-10') },
-      { matriculaId: mGabrielaWeb.id, descricao: 'Prova 2', valor: 10.0, data: new Date('2024-04-15') },
-      { matriculaId: mGabrielaWeb.id, descricao: 'Trabalho Final', valor: 10.0, data: new Date('2024-06-20') },
-    ],
-  })
-
-  // Gabriela — Python para Dados (Aprovada: média 8.8)
-  const mGabrielaPython = await prisma.matricula.create({
-    data: { alunoId: gabriela.id, cursoId: pythonDados.id, dataInicio: new Date('2024-03-01') },
-  })
-  await prisma.nota.createMany({
-    data: [
-      { matriculaId: mGabrielaPython.id, descricao: 'Prova 1', valor: 9.0, data: new Date('2024-04-10') },
-      { matriculaId: mGabrielaPython.id, descricao: 'Prova 2', valor: 8.5, data: new Date('2024-05-15') },
-      { matriculaId: mGabrielaPython.id, descricao: 'Projeto Final', valor: 9.0, data: new Date('2024-07-01') },
-    ],
-  })
-
-  // Hugo — Banco de Dados (Reprovado: média 3.2)
-  const mHugoDB = await prisma.matricula.create({
-    data: { alunoId: hugo.id, cursoId: bancoDados.id, dataInicio: new Date('2024-03-01') },
-  })
-  await prisma.nota.createMany({
-    data: [
-      { matriculaId: mHugoDB.id, descricao: 'Prova 1', valor: 3.0, data: new Date('2024-04-10') },
-      { matriculaId: mHugoDB.id, descricao: 'Prova 2', valor: 2.5, data: new Date('2024-05-15') },
-      { matriculaId: mHugoDB.id, descricao: 'Projeto Final', valor: 4.0, data: new Date('2024-07-01') },
-    ],
-  })
-
-  // Hugo — Python para Dados (Em andamento: média 5.8)
-  const mHugoPython = await prisma.matricula.create({
-    data: { alunoId: hugo.id, cursoId: pythonDados.id, dataInicio: new Date('2024-08-01') },
-  })
-  await prisma.nota.createMany({
-    data: [
-      { matriculaId: mHugoPython.id, descricao: 'Prova 1', valor: 6.0, data: new Date('2024-09-10') },
-      { matriculaId: mHugoPython.id, descricao: 'Prova 2', valor: 5.5, data: new Date('2024-10-15') },
-    ],
-  })
-
+  console.log(`   ✓ ${totalMatriculas} matrículas criadas`)
+  console.log(`   ✓ ${totalNotas} notas criadas`)
   console.log('✅ Seed concluído!')
-  console.log('   4 cursos | 8 alunos | 16 matrículas | 37 notas')
 }
 
 main()

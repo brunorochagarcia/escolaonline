@@ -2,8 +2,10 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Status } from '@prisma/client'
 import { buscarCursoPorId } from '@/lib/api/cursos'
+import { auth } from '@/lib/auth'
 import { calcularMedia, calcularSituacao, cn } from '@/lib/utils'
 import { SituacaoBadge } from '@/components/shared/SituacaoBadge'
+import { EditarCursoButton } from '@/components/cursos/EditarCursoButton'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -11,7 +13,12 @@ interface PageProps {
 
 export default async function CursoDetalhesPage({ params }: PageProps) {
   const { id } = await params
-  const curso = await buscarCursoPorId(id)
+  const [curso, session] = await Promise.all([buscarCursoPorId(id), auth()])
+  const role = session?.user?.role
+  const userId = session?.user?.id
+  const podeEditarCurso =
+    role === 'ADMIN' ||
+    (role === 'PROFESSOR' && !!curso?.instrutorId && curso.instrutorId === userId)
 
   if (!curso) notFound()
 
@@ -25,12 +32,18 @@ export default async function CursoDetalhesPage({ params }: PageProps) {
           <h1 className="mt-2 text-2xl font-bold text-primary">{curso.nome}</h1>
           <p className="mt-1 text-sm text-zinc-500">{curso.descricao}</p>
         </div>
-        <Link
-          href={`/cursos/${curso.id}/editar`}
-          className="rounded-xl border border-secondary px-4 py-2 text-sm font-medium text-primary hover:bg-secondary transition-colors"
-        >
-          Editar
-        </Link>
+        {podeEditarCurso && (
+          <EditarCursoButton
+            cursoId={curso.id}
+            defaultValues={{
+              nome: curso.nome,
+              descricao: curso.descricao,
+              cargaHoraria: curso.cargaHoraria,
+              instrutor: curso.instrutor,
+              status: curso.status,
+            }}
+          />
+        )}
       </div>
 
       {/* Informações do curso */}
@@ -89,10 +102,10 @@ export default async function CursoDetalhesPage({ params }: PageProps) {
                     </td>
                     <td className="px-4 py-3 text-right">
                       <Link
-                        href={`/alunos/${matricula.alunoId}/boletim`}
+                        href={`/alunos/${matricula.alunoId}`}
                         className="text-xs font-medium text-primary hover:underline"
                       >
-                        Boletim →
+                        Detalhes →
                       </Link>
                     </td>
                   </tr>

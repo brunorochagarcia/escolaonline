@@ -98,7 +98,7 @@ export async function buscarAlunoParaBoletim(id: string) {
         select: {
           id: true,
           dataInicio: true,
-          curso: { select: { nome: true } },
+          curso: { select: { nome: true, instrutorId: true } },
           notas: {
             select: { id: true, descricao: true, valor: true, data: true },
             orderBy: { data: 'asc' },
@@ -107,6 +107,13 @@ export async function buscarAlunoParaBoletim(id: string) {
         orderBy: { dataInicio: 'asc' },
       },
     },
+  })
+}
+
+export async function buscarAlunoIdPorEmail(email: string) {
+  return prisma.aluno.findUnique({
+    where: { email },
+    select: { id: true },
   })
 }
 

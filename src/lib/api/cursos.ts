@@ -21,6 +21,7 @@ export async function buscarCursoPorId(id: string) {
       descricao: true,
       cargaHoraria: true,
       instrutor: true,
+      instrutorId: true,
       status: true,
       matriculas: {
         select: {

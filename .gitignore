@@ -40,3 +40,6 @@ Thumbs.db
 # prisma
 prisma/*.db
 prisma/*.db-journal
+
+# dev notes
+LOGINS.md

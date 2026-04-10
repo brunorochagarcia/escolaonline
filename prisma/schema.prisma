@@ -8,6 +8,8 @@ datasource db {
 
 enum Role {
   ADMIN
+  PROFESSOR
+  ALUNO
 }
 
 enum Status {
@@ -16,11 +18,13 @@ enum Status {
 }
 
 model User {
-  id    String @id @default(cuid())
-  nome  String @db.VarChar(100)
-  email String @unique @db.VarChar(254)
-  senha String @db.Char(60)
-  role  Role   @default(ADMIN)
+  id     String  @id @default(cuid())
+  nome   String  @db.VarChar(100)
+  email  String  @unique @db.VarChar(254)
+  senha  String  @db.Char(60)
+  role   Role    @default(ADMIN)
+
+  cursos Curso[]
 }
 
 model Aluno {
@@ -40,8 +44,10 @@ model Curso {
   descricao    String      @db.Text
   cargaHoraria Int
   instrutor    String      @db.VarChar(100)
+  instrutorId  String?
   status       Status      @default(ATIVO)
 
+  user         User?       @relation(fields: [instrutorId], references: [id])
   matriculas   Matricula[]
 }
 

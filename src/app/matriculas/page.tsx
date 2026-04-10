@@ -5,7 +5,7 @@ import { listarCursosParaFiltro } from '@/lib/api/cursos'
 import { listarAlunosParaSelect } from '@/lib/api/alunos'
 import { FiltroCurso } from '@/components/matriculas/FiltroCurso'
 import { NovaMatriculaButton } from '@/components/matriculas/NovaMatriculaButton'
-import Link from 'next/link'
+import { MatriculasClient } from '@/components/matriculas/MatriculasClient'
 
 interface PageProps {
   searchParams: Promise<{ cursoId?: string }>
@@ -36,45 +36,7 @@ export default async function MatriculasPage({ searchParams }: PageProps) {
       {matriculas.length === 0 ? (
         <p className="text-sm text-zinc-500">Nenhuma matrícula encontrada.</p>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-secondary">
-          <table className="w-full text-sm">
-            <thead className="bg-secondary text-left text-xs font-semibold uppercase tracking-wide text-primary">
-              <tr>
-                <th className="px-4 py-3">Aluno</th>
-                <th className="px-4 py-3">Curso</th>
-                <th className="px-4 py-3">Data de início</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-secondary">
-              {matriculas.map((matricula) => (
-                <tr
-                  key={matricula.id}
-                  className="bg-white hover:bg-surface transition-colors"
-                >
-                  <td className="px-4 py-3 font-medium">
-                    <Link
-                      href={`/alunos/${matricula.alunoId}`}
-                      className="text-zinc-900 hover:underline"
-                    >
-                      {matricula.aluno.nome}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3 text-zinc-500">
-                    <Link
-                      href={`/cursos/${matricula.cursoId}`}
-                      className="hover:underline"
-                    >
-                      {matricula.curso.nome}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3 text-zinc-500">
-                    {new Date(matricula.dataInicio).toLocaleDateString('pt-BR')}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <MatriculasClient matriculas={matriculas} />
       )}
     </main>
   )

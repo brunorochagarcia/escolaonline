@@ -1,7 +1,15 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
+import { auth } from '@/lib/auth'
+import { buscarAlunoIdPorEmail } from '@/lib/api/alunos'
 
 export default async function DashboardPage() {
+  const session = await auth()
+  if (session?.user?.role === 'ALUNO' && session.user.email) {
+    const aluno = await buscarAlunoIdPorEmail(session.user.email)
+    if (aluno) redirect(`/alunos/${aluno.id}`)
+  }
   const [totalAlunos, totalCursos, cursosAtivos, totalMatriculas, agregacaoNotas] =
     await Promise.all([
       prisma.aluno.count(),
