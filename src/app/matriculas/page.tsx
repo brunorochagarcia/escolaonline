@@ -1,8 +1,11 @@
-import Link from 'next/link'
 import { Suspense } from 'react'
+import { Status } from '@prisma/client'
 import { listarMatriculas } from '@/lib/api/matriculas'
 import { listarCursosParaFiltro } from '@/lib/api/cursos'
+import { listarAlunosParaSelect } from '@/lib/api/alunos'
 import { FiltroCurso } from '@/components/matriculas/FiltroCurso'
+import { NovaMatriculaButton } from '@/components/matriculas/NovaMatriculaButton'
+import Link from 'next/link'
 
 interface PageProps {
   searchParams: Promise<{ cursoId?: string }>
@@ -11,50 +14,47 @@ interface PageProps {
 export default async function MatriculasPage({ searchParams }: PageProps) {
   const { cursoId } = await searchParams
 
-  const [matriculas, cursos] = await Promise.all([
+  const [matriculas, cursos, alunos, cursosAtivos] = await Promise.all([
     listarMatriculas(undefined, cursoId),
     listarCursosParaFiltro(),
+    listarAlunosParaSelect(),
+    listarCursosParaFiltro(Status.ATIVO),
   ])
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8">
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Matrículas</h1>
+        <h1 className="text-2xl font-bold text-primary">Matrículas</h1>
         <div className="flex items-center gap-3">
           <Suspense>
             <FiltroCurso cursos={cursos} />
           </Suspense>
-          <Link
-            href="/matriculas/nova"
-            className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
-          >
-            Nova matrícula
-          </Link>
+          <NovaMatriculaButton alunos={alunos} cursos={cursosAtivos} />
         </div>
       </div>
 
       {matriculas.length === 0 ? (
         <p className="text-sm text-zinc-500">Nenhuma matrícula encontrada.</p>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800">
+        <div className="overflow-hidden rounded-2xl border border-secondary">
           <table className="w-full text-sm">
-            <thead className="bg-zinc-50 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+            <thead className="bg-secondary text-left text-xs font-semibold uppercase tracking-wide text-primary">
               <tr>
                 <th className="px-4 py-3">Aluno</th>
                 <th className="px-4 py-3">Curso</th>
                 <th className="px-4 py-3">Data de início</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+            <tbody className="divide-y divide-secondary">
               {matriculas.map((matricula) => (
                 <tr
                   key={matricula.id}
-                  className="bg-white hover:bg-zinc-50 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+                  className="bg-white hover:bg-surface transition-colors"
                 >
                   <td className="px-4 py-3 font-medium">
                     <Link
                       href={`/alunos/${matricula.alunoId}`}
-                      className="hover:underline"
+                      className="text-zinc-900 hover:underline"
                     >
                       {matricula.aluno.nome}
                     </Link>

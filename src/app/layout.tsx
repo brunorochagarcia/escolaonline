@@ -1,9 +1,10 @@
 import type { Metadata } from 'next'
-import { Geist } from 'next/font/google'
+import { Outfit } from 'next/font/google'
 import { Toaster } from 'sonner'
+import { AppShell } from '@/components/AppShell'
 import './globals.css'
 
-const geist = Geist({ subsets: ['latin'] })
+const outfit = Outfit({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'Escola Online',
@@ -13,8 +14,8 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR">
-      <body className={`${geist.className} bg-zinc-50 text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-100`}>
-        {children}
+      <body className={`${outfit.className} bg-surface text-zinc-900 antialiased`}>
+        <AppShell>{children}</AppShell>
         <Toaster richColors position="top-right" />
       </body>
     </html>

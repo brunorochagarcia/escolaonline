@@ -21,14 +21,14 @@ export default async function EditarAlunoPage({ params }: PageProps) {
       <div className="mb-6">
         <Link
           href={`/alunos/${id}`}
-          className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+          className="text-sm text-zinc-500 hover:text-primary transition-colors"
         >
           ← Voltar para o aluno
         </Link>
-        <h1 className="mt-2 text-2xl font-bold">Editar aluno</h1>
+        <h1 className="mt-2 text-2xl font-bold text-primary">Editar aluno</h1>
       </div>
 
-      <div className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="rounded-2xl border border-secondary bg-white p-6 shadow-sm">
         <AlunoForm
           defaultValues={{
             nome: aluno.nome,

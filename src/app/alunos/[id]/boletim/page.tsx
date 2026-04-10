@@ -16,13 +16,11 @@ export default async function BoletimPage({ params }: PageProps) {
 
   const { matriculas } = aluno
 
-  // Calcula situação por matrícula para o resumo
   const situacoes = matriculas.map((m) =>
     calcularSituacao(calcularMedia(m.notas.map((n) => Number(n.valor)))),
   )
   const aprovados = situacoes.filter((s) => s === 'Aprovado').length
   const reprovados = situacoes.filter((s) => s === 'Reprovado').length
-  const emAndamento = situacoes.filter((s) => s === 'Em Andamento').length
 
   // RN-01: média flat ponderada por quantidade de notas — consistente com o ranking
   const mediaGeral = calcularMediaGeral(
@@ -31,26 +29,19 @@ export default async function BoletimPage({ params }: PageProps) {
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-8">
-      {/* Navegação */}
       <div className="mb-6">
-        <Link
-          href={`/alunos/${id}`}
-          className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
-        >
+        <Link href={`/alunos/${id}`} className="text-sm text-zinc-500 hover:text-primary transition-colors">
           ← Voltar para o aluno
         </Link>
       </div>
 
       {/* Cabeçalho do boletim */}
-      <div className="mb-8 rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
-        <h1 className="text-xl font-bold">Boletim Escolar</h1>
+      <div className="mb-8 rounded-2xl border border-secondary bg-white p-6">
+        <h1 className="text-xl font-bold text-primary">Boletim Escolar</h1>
         <div className="mt-3 grid grid-cols-2 gap-y-1 text-sm sm:grid-cols-3">
           <InfoRow label="Aluno" value={aluno.nome} />
           <InfoRow label="E-mail" value={aluno.email} />
-          <InfoRow
-            label="Data de nascimento"
-            value={aluno.dataNascimento.toLocaleDateString('pt-BR')}
-          />
+          <InfoRow label="Data de nascimento" value={aluno.dataNascimento.toLocaleDateString('pt-BR')} />
         </div>
       </div>
 
@@ -59,10 +50,7 @@ export default async function BoletimPage({ params }: PageProps) {
         <ResumoCard label="Cursos" valor={String(matriculas.length)} />
         <ResumoCard label="Aprovados" valor={String(aprovados)} destaque="green" />
         <ResumoCard label="Reprovados" valor={String(reprovados)} destaque="red" />
-        <ResumoCard
-          label="Média geral"
-          valor={mediaGeral !== null ? mediaGeral.toFixed(1) : '—'}
-        />
+        <ResumoCard label="Média geral" valor={mediaGeral !== null ? mediaGeral.toFixed(1) : '—'} />
       </div>
 
       {/* Boletim por curso */}
@@ -75,22 +63,19 @@ export default async function BoletimPage({ params }: PageProps) {
             const situacao = calcularSituacao(media)
 
             return (
-              <div
-                key={matricula.id}
-                className="overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800"
-              >
+              <div key={matricula.id} className="overflow-hidden rounded-2xl border border-secondary">
                 {/* Cabeçalho do curso */}
-                <div className="flex items-center justify-between bg-zinc-50 px-5 py-3 dark:bg-zinc-800/60">
+                <div className="flex items-center justify-between bg-secondary px-5 py-3">
                   <div>
-                    <p className="font-semibold">{matricula.curso.nome}</p>
-                    <p className="text-xs text-zinc-500">
+                    <p className="font-semibold text-primary">{matricula.curso.nome}</p>
+                    <p className="text-xs text-zinc-600">
                       Matrícula em {new Date(matricula.dataInicio).toLocaleDateString('pt-BR')}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="text-right">
-                      <p className="text-xs text-zinc-400">Média</p>
-                      <p className="text-sm font-bold">
+                      <p className="text-xs text-zinc-600">Média</p>
+                      <p className="text-sm font-bold text-primary">
                         {media !== null ? media.toFixed(1) : '—'}
                       </p>
                     </div>
@@ -100,37 +85,35 @@ export default async function BoletimPage({ params }: PageProps) {
 
                 {/* Tabela de notas */}
                 {matricula.notas.length === 0 ? (
-                  <p className="bg-white px-5 py-4 text-sm text-zinc-400 dark:bg-zinc-900">
-                    Nenhuma nota lançada.
-                  </p>
+                  <p className="bg-white px-5 py-4 text-sm text-zinc-400">Nenhuma nota lançada.</p>
                 ) : (
-                  <table className="w-full bg-white text-sm dark:bg-zinc-900">
-                    <thead className="border-b border-zinc-100 text-left text-xs font-semibold uppercase tracking-wide text-zinc-400 dark:border-zinc-800">
+                  <table className="w-full bg-white text-sm">
+                    <thead className="border-b border-secondary text-left text-xs font-semibold uppercase tracking-wide text-primary">
                       <tr>
                         <th className="px-5 py-2">Avaliação</th>
                         <th className="px-5 py-2">Data</th>
                         <th className="px-5 py-2 text-right">Nota</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                    <tbody className="divide-y divide-secondary">
                       {matricula.notas.map((nota) => (
-                        <tr key={nota.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/30">
-                          <td className="px-5 py-2.5">{nota.descricao}</td>
+                        <tr key={nota.id} className="hover:bg-surface transition-colors">
+                          <td className="px-5 py-2.5 text-zinc-900">{nota.descricao}</td>
                           <td className="px-5 py-2.5 text-zinc-500">
                             {new Date(nota.data).toLocaleDateString('pt-BR')}
                           </td>
-                          <td className="px-5 py-2.5 text-right font-medium tabular-nums">
+                          <td className="px-5 py-2.5 text-right font-medium tabular-nums text-primary">
                             {nota.valor.toFixed(1)}
                           </td>
                         </tr>
                       ))}
                     </tbody>
-                    <tfoot className="border-t border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-800/40">
+                    <tfoot className="border-t border-secondary bg-secondary">
                       <tr>
-                        <td colSpan={2} className="px-5 py-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                        <td colSpan={2} className="px-5 py-2 text-xs font-semibold uppercase tracking-wide text-primary">
                           Média do curso
                         </td>
-                        <td className="px-5 py-2 text-right font-bold tabular-nums">
+                        <td className="px-5 py-2 text-right font-bold tabular-nums text-primary">
                           {media !== null ? media.toFixed(1) : '—'}
                         </td>
                       </tr>
@@ -150,29 +133,19 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <span className="text-xs text-zinc-400">{label}</span>
-      <p className="font-medium">{value}</p>
+      <p className="font-medium text-zinc-900">{value}</p>
     </div>
   )
 }
 
-function ResumoCard({
-  label,
-  valor,
-  destaque,
-}: {
-  label: string
-  valor: string
-  destaque?: 'green' | 'red'
-}) {
+function ResumoCard({ label, valor, destaque }: { label: string; valor: string; destaque?: 'green' | 'red' }) {
   const valorClass =
-    destaque === 'green'
-      ? 'text-green-600 dark:text-green-400'
-      : destaque === 'red'
-        ? 'text-red-600 dark:text-red-400'
-        : 'text-zinc-900 dark:text-zinc-100'
+    destaque === 'green' ? 'text-primary' :
+    destaque === 'red'   ? 'text-accent'  :
+                           'text-primary'
 
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+    <div className="rounded-2xl border border-secondary bg-white p-4">
       <p className="text-xs text-zinc-400">{label}</p>
       <p className={`mt-1 text-2xl font-bold ${valorClass}`}>{valor}</p>
     </div>

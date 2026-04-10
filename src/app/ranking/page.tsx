@@ -23,13 +23,10 @@ export default async function RankingPage() {
   return (
     <main className="mx-auto max-w-3xl px-4 py-8">
       <div className="mb-6">
-        <Link
-          href="/alunos"
-          className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
-        >
+        <Link href="/alunos" className="text-sm text-zinc-500 hover:text-primary transition-colors">
           ← Voltar para alunos
         </Link>
-        <h1 className="mt-2 text-2xl font-bold">Ranking de alunos</h1>
+        <h1 className="mt-2 text-2xl font-bold text-primary">Ranking de alunos</h1>
         <p className="mt-1 text-sm text-zinc-500">
           Média geral ponderada por quantidade de notas. Alunos sem notas não são exibidos.
         </p>
@@ -38,9 +35,9 @@ export default async function RankingPage() {
       {ranking.length === 0 ? (
         <p className="text-sm text-zinc-500">Nenhum aluno com notas lançadas.</p>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800">
+        <div className="overflow-hidden rounded-2xl border border-secondary">
           <table className="w-full text-sm">
-            <thead className="bg-zinc-50 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+            <thead className="bg-secondary text-left text-xs font-semibold uppercase tracking-wide text-primary">
               <tr>
                 <th className="px-4 py-3">Aluno</th>
                 <th className="px-4 py-3">Cursos</th>
@@ -48,18 +45,15 @@ export default async function RankingPage() {
                 <th className="px-4 py-3 text-right">Média geral</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+            <tbody className="divide-y divide-secondary">
               {ranking.map((aluno, index) => (
-                <tr
-                  key={aluno.id}
-                  className="bg-white hover:bg-zinc-50 dark:bg-zinc-900 dark:hover:bg-zinc-800"
-                >
+                <tr key={aluno.id} className="bg-white hover:bg-surface transition-colors">
                   <td className="px-4 py-3 font-medium">
                     <div className="flex items-center gap-2">
                       <span className={cn('w-7 shrink-0 text-sm tabular-nums', medalClass(index))}>
                         {index + 1}º
                       </span>
-                      <Link href={`/alunos/${aluno.id}/boletim`} className="hover:underline">
+                      <Link href={`/alunos/${aluno.id}/boletim`} className="text-zinc-900 hover:underline">
                         {aluno.nome}
                       </Link>
                     </div>
@@ -85,5 +79,5 @@ function medalClass(index: number) {
   if (index === 0) return 'font-bold text-yellow-500'
   if (index === 1) return 'font-bold text-zinc-400'
   if (index === 2) return 'font-bold text-amber-600'
-  return 'font-medium text-zinc-700 dark:text-zinc-300'
+  return 'font-medium text-zinc-700'
 }

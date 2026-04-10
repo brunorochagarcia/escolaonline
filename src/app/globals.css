@@ -1,1 +1,16 @@
 @import "tailwindcss";
+
+@theme {
+  /* Paleta principal */
+  --color-primary: #1B4332;        /* Verde lousa — sidebar, títulos, botões */
+  --color-primary-hover: #163828;  /* Verde lousa mais escuro — hover de botão */
+  --color-secondary: #D6E1D8;      /* Sálvia — bordas, cabeçalhos de tabela */
+  --color-accent: #C26B51;         /* Terracota — erros, reprovado */
+
+  /* Fundos */
+  --color-surface: #EDF3EF;        /* Verde suave — fundo da página */
+
+  /* Cores sólidas para badges (evita variantes de opacidade problemáticas) */
+  --color-primary-soft: #C8DDD0;   /* Verde claro — badge aprovado */
+  --color-accent-soft: #F2E0DA;    /* Terracota claro — badge reprovado / erros */
+}

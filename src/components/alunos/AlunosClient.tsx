@@ -35,7 +35,7 @@ export function AlunosClient({ alunos }: AlunosClientProps) {
           value={termo}
           onChange={(e) => setTermo(e.target.value)}
           placeholder="Buscar por nome ou e-mail…"
-          className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 sm:max-w-xs"
+          className="w-full rounded-xl border border-secondary bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary sm:max-w-xs"
         />
       </div>
 
@@ -44,9 +44,9 @@ export function AlunosClient({ alunos }: AlunosClientProps) {
           {termo ? `Nenhum aluno encontrado para "${termo}".` : 'Nenhum aluno cadastrado.'}
         </p>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800">
+        <div className="overflow-hidden rounded-2xl border border-secondary">
           <table className="w-full text-sm">
-            <thead className="bg-zinc-50 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+            <thead className="bg-secondary text-left text-xs font-semibold uppercase tracking-wide text-primary">
               <tr>
                 <th className="px-4 py-3">Nome</th>
                 <th className="px-4 py-3">E-mail</th>
@@ -55,13 +55,10 @@ export function AlunosClient({ alunos }: AlunosClientProps) {
                 <th className="px-4 py-3" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+            <tbody className="divide-y divide-secondary">
               {resultado.map((aluno) => (
-                <tr
-                  key={aluno.id}
-                  className="bg-white hover:bg-zinc-50 dark:bg-zinc-900 dark:hover:bg-zinc-800"
-                >
-                  <td className="px-4 py-3 font-medium">{aluno.nome}</td>
+                <tr key={aluno.id} className="bg-white hover:bg-surface transition-colors">
+                  <td className="px-4 py-3 font-medium text-zinc-900">{aluno.nome}</td>
                   <td className="px-4 py-3 text-zinc-500">{aluno.email}</td>
                   <td className="px-4 py-3 text-zinc-500">
                     {new Date(aluno.dataNascimento).toLocaleDateString('pt-BR')}
@@ -71,13 +68,13 @@ export function AlunosClient({ alunos }: AlunosClientProps) {
                     <div className="flex items-center justify-end gap-4">
                       <Link
                         href={`/alunos/${aluno.id}/boletim`}
-                        className="text-xs font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+                        className="text-xs font-medium text-primary hover:underline"
                       >
                         Boletim
                       </Link>
                       <Link
                         href={`/alunos/${aluno.id}`}
-                        className="text-xs font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+                        className="text-xs font-medium text-primary hover:underline"
                       >
                         Detalhes →
                       </Link>

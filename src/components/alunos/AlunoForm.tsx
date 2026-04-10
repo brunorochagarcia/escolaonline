@@ -16,10 +16,22 @@ interface AlunoFormProps {
   defaultValues?: AlunoDefaultValues
   onSubmit: (data: AlunoFormData, fotoBase64?: string) => Promise<AlunoActionResult>
   submitLabel: string
-  redirectTo: string
+  /** Modo página: redireciona para esta rota após sucesso */
+  redirectTo?: string
+  /** Modo modal: chamado após sucesso (fechar modal + refresh) */
+  onSuccess?: () => void
+  /** Modo modal: chamado pelo botão Cancelar */
+  onClose?: () => void
 }
 
-export function AlunoForm({ defaultValues, onSubmit, submitLabel, redirectTo }: AlunoFormProps) {
+export function AlunoForm({
+  defaultValues,
+  onSubmit,
+  submitLabel,
+  redirectTo,
+  onSuccess,
+  onClose,
+}: AlunoFormProps) {
   const [isPending, startTransition] = useTransition()
   const [formError, setFormError] = useState<string | null>(null)
   const [fotoBase64, setFotoBase64] = useState<string | null>(null)
@@ -53,7 +65,11 @@ export function AlunoForm({ defaultValues, onSubmit, submitLabel, redirectTo }: 
     startTransition(async () => {
       const result = await onSubmit(data, fotoBase64 ?? undefined)
       if ('success' in result) {
-        router.push(redirectTo)
+        if (onSuccess) {
+          onSuccess()
+        } else if (redirectTo) {
+          router.push(redirectTo)
+        }
         return
       }
       for (const [field, messages] of Object.entries(result.error)) {
@@ -69,7 +85,7 @@ export function AlunoForm({ defaultValues, onSubmit, submitLabel, redirectTo }: 
   return (
     <form onSubmit={handleSubmit(submit)} className="space-y-5">
       {formError && (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
+        <p className="rounded-xl bg-accent-soft px-3 py-2 text-sm text-accent">
           {formError}
         </p>
       )}
@@ -105,36 +121,40 @@ export function AlunoForm({ defaultValues, onSubmit, submitLabel, redirectTo }: 
             <img
               src={fotoPreview}
               alt="Preview da foto"
-              className="h-16 w-16 rounded-full object-cover ring-2 ring-zinc-200 dark:ring-zinc-700"
+              className="h-16 w-16 rounded-full object-cover ring-2 ring-secondary"
             />
           )}
-          <label className="cursor-pointer rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800">
+          <label className="cursor-pointer rounded-xl border border-secondary px-3 py-2 text-sm text-primary hover:bg-secondary transition-colors">
             {fotoPreview ? 'Trocar foto' : 'Escolher arquivo'}
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              className="sr-only"
-            />
+            <input type="file" accept="image/*" onChange={handleFileChange} className="sr-only" />
           </label>
         </div>
       </Field>
 
-      {/* Preserva URL e ID do Cloudinary ao editar sem trocar a foto */}
       <input type="hidden" {...register('fotoUrl')} />
       <input type="hidden" {...register('fotoPublicId')} />
 
       <div className="flex justify-end gap-3 pt-2">
-        <a
-          href="/alunos"
-          className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
-        >
-          Cancelar
-        </a>
+        {onClose ? (
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl border border-secondary px-4 py-2 text-sm font-medium text-primary hover:bg-secondary transition-colors"
+          >
+            Cancelar
+          </button>
+        ) : (
+          <a
+            href="/alunos"
+            className="rounded-xl border border-secondary px-4 py-2 text-sm font-medium text-primary hover:bg-secondary transition-colors"
+          >
+            Cancelar
+          </a>
+        )}
         <button
           type="submit"
           disabled={isPending}
-          className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+          className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover transition-colors disabled:opacity-50"
         >
           {isPending ? 'Salvando…' : submitLabel}
         </button>
@@ -154,19 +174,16 @@ function Field({
 }) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{label}</label>
+      <label className="text-sm font-medium text-zinc-700">{label}</label>
       {children}
-      {error && <p className="text-xs text-red-500">{error}</p>}
+      {error && <p className="text-xs text-accent">{error}</p>}
     </div>
   )
 }
 
 function inputClass(hasError: boolean) {
   return cn(
-    'rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2',
-    'bg-white dark:bg-zinc-900 dark:text-zinc-100',
-    hasError
-      ? 'border-red-400 focus:ring-red-300'
-      : 'border-zinc-300 focus:ring-zinc-400 dark:border-zinc-700',
+    'w-full rounded-xl border px-3 py-2 text-sm bg-white text-zinc-900 focus:outline-none focus:ring-2 focus:ring-secondary',
+    hasError ? 'border-accent' : 'border-secondary',
   )
 }

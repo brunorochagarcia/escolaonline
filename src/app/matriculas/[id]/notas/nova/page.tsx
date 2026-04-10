@@ -19,17 +19,17 @@ export default async function NovaNotaPage({ params }: PageProps) {
       <div className="mb-6">
         <Link
           href={`/alunos/${matricula.alunoId}`}
-          className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+          className="text-sm text-zinc-500 hover:text-primary transition-colors"
         >
           ← Voltar para o aluno
         </Link>
-        <h1 className="mt-2 text-2xl font-bold">Lançar nota</h1>
+        <h1 className="mt-2 text-2xl font-bold text-primary">Lançar nota</h1>
         <p className="mt-1 text-sm text-zinc-500">
           {matricula.aluno.nome} — {matricula.curso.nome}
         </p>
       </div>
 
-      <div className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="rounded-2xl border border-secondary bg-white p-6 shadow-sm">
         <NotaForm matriculaId={matriculaId} alunoId={matricula.alunoId} />
       </div>
     </main>
