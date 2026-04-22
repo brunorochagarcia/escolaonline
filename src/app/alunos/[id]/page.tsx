@@ -6,6 +6,7 @@ import { calcularMedia, calcularMediaGeral, calcularSituacao } from '@/lib/utils
 import { SituacaoBadge } from '@/components/shared/SituacaoBadge'
 import { LancarNotaButton } from '@/components/notas/LancarNotaButton'
 import { EditarAlunoButton } from '@/components/alunos/EditarAlunoButton'
+import { GraficoEvolucaoNotas } from '@/components/alunos/GraficoEvolucaoNotas'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -53,18 +54,32 @@ export default async function AlunoDetalhesPage({ params }: PageProps) {
           <h1 className="mt-2 text-2xl font-bold text-primary">{aluno.nome}</h1>
           <p className="mt-1 text-sm text-zinc-500">{aluno.email}</p>
         </div>
-        {(podeEditar || podeEditarProprio) && alunoEdicao && (
-          <EditarAlunoButton
-            alunoId={aluno.id}
-            defaultValues={{
-              nome: alunoEdicao.nome,
-              email: alunoEdicao.email,
-              dataNascimento: alunoEdicao.dataNascimento.toISOString().split('T')[0],
-              fotoUrl: alunoEdicao.fotoUrl ?? '',
-              fotoPublicId: alunoEdicao.fotoPublicId ?? '',
-            }}
-          />
-        )}
+        <div className="flex items-center gap-2">
+          {(podeEditar || podeEditarProprio) && alunoEdicao && (
+            <EditarAlunoButton
+              alunoId={aluno.id}
+              defaultValues={{
+                nome: alunoEdicao.nome,
+                email: alunoEdicao.email,
+                dataNascimento: alunoEdicao.dataNascimento.toISOString().split('T')[0],
+                fotoUrl: alunoEdicao.fotoUrl ?? '',
+                fotoPublicId: alunoEdicao.fotoPublicId ?? '',
+              }}
+            />
+          )}
+          <a
+            href={`/api/boletim/${aluno.id}`}
+            className="rounded-lg border border-secondary px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-secondary transition-colors"
+          >
+            PDF
+          </a>
+          <a
+            href={`/api/boletim/${aluno.id}?format=csv`}
+            className="rounded-lg border border-secondary px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-secondary transition-colors"
+          >
+            CSV
+          </a>
+        </div>
       </div>
 
       {/* Info do aluno */}
@@ -89,6 +104,19 @@ export default async function AlunoDetalhesPage({ params }: PageProps) {
           valor={mediaGeral !== null ? mediaGeral.toFixed(1) : '—'}
         />
       </div>
+
+      {/* Gráfico de evolução */}
+      <GraficoEvolucaoNotas
+        matriculas={matriculas.map((m) => ({
+          id: m.id,
+          curso: { nome: m.curso.nome },
+          notas: m.notas.map((n) => ({
+            id: n.id,
+            valor: Number(n.valor),
+            data: n.data.toISOString(),
+          })),
+        }))}
+      />
 
       {/* Matrículas e notas */}
       <h2 className="mb-3 text-lg font-semibold text-primary">Cursos matriculados</h2>

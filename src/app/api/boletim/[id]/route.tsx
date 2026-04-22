@@ -1,8 +1,23 @@
 import { NextRequest } from 'next/server'
-import { renderToBuffer, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer'
+import {
+  renderToBuffer,
+  Document,
+  Page,
+  Text,
+  View,
+  StyleSheet,
+  Svg,
+  Line as SvgLine,
+  Polyline,
+  Circle,
+  Rect,
+} from '@react-pdf/renderer'
 import { buscarAlunoParaBoletim } from '@/lib/api/alunos'
 import { calcularMedia, calcularMediaGeral, calcularSituacao } from '@/lib/utils'
 import { auth } from '@/lib/auth'
+import Papa from 'papaparse'
+
+// ─── PDF styles ────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   page: { padding: 40, fontFamily: 'Helvetica', fontSize: 10, color: '#18181b' },
@@ -66,6 +81,96 @@ function situacaoColor(situacao: string) {
   return '#d97706'
 }
 
+// ─── SVG chart helpers ─────────────────────────────────────────────────────────
+
+const CW = 435   // total chart width
+const CH = 90    // total chart height
+const PL = 22    // padding left (Y-axis labels)
+const PR = 6     // padding right
+const PT = 6     // padding top
+const PB = 18    // padding bottom (X-axis labels)
+const PW = CW - PL - PR   // plot width
+const PH = CH - PT - PB   // plot height
+
+function yOf(valor: number) {
+  return PT + PH - (valor / 10) * PH
+}
+
+function xOf(i: number, total: number) {
+  if (total === 1) return PL + PW / 2
+  return PL + (i / (total - 1)) * PW
+}
+
+function pontos(notas: { valor: number }[]) {
+  return notas.map((n, i) => `${xOf(i, notas.length).toFixed(1)},${yOf(Number(n.valor)).toFixed(1)}`).join(' ')
+}
+
+interface NotaChart { valor: number; data: Date }
+
+function GraficoSvg({ notas, color }: { notas: NotaChart[]; color: string }) {
+  if (notas.length === 0) return null
+
+  const tickDatas = notas.map((n, i) => ({
+    x: xOf(i, notas.length),
+    label: new Date(n.data).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+  }))
+
+  return (
+    <Svg width={CW} height={CH} style={{ marginTop: 4, marginBottom: 4 }}>
+      {/* fundo */}
+      <Rect x={PL} y={PT} width={PW} height={PH} fill="#f9f9fb" />
+
+      {/* linhas de referência: 10, 7, 5, 0 */}
+      {[0, 5, 7, 10].map((v) => {
+        const y = yOf(v)
+        return (
+          <SvgLine key={v} x1={PL} y1={y} x2={PL + PW} y2={y}
+            stroke={v === 7 ? '#16a34a' : v === 5 ? '#d97706' : '#e4e4e7'}
+            strokeWidth={v === 7 || v === 5 ? 0.8 : 0.5}
+            strokeDasharray={v === 7 || v === 5 ? '3 2' : undefined}
+          />
+        )
+      })}
+
+      {/* labels eixo Y */}
+      {[0, 5, 7, 10].map((v) => (
+        <Text key={v} x={PL - 3} y={yOf(v) + 2.5}
+          fontSize={6} fill="#71717a" textAnchor="end"
+        >
+          {v}
+        </Text>
+      ))}
+
+      {/* linha do gráfico */}
+      {notas.length > 1 && (
+        <Polyline points={pontos(notas)} stroke={color} strokeWidth={1.5} fill="none" />
+      )}
+
+      {/* pontos */}
+      {notas.map((n, i) => (
+        <Circle
+          key={i}
+          cx={xOf(i, notas.length)}
+          cy={yOf(Number(n.valor))}
+          r={3}
+          fill={color}
+        />
+      ))}
+
+      {/* labels eixo X */}
+      {tickDatas.map((t, i) => (
+        <Text key={i} x={t.x} y={CH - 4}
+          fontSize={6} fill="#71717a" textAnchor="middle"
+        >
+          {t.label}
+        </Text>
+      ))}
+    </Svg>
+  )
+}
+
+// ─── Route ────────────────────────────────────────────────────────────────────
+
 interface RouteProps {
   params: Promise<{ id: string }>
 }
@@ -87,9 +192,33 @@ export async function GET(_req: NextRequest, { params }: RouteProps) {
     return new Response('Não autorizado', { status: 403 })
   }
 
+  // ── CSV ──────────────────────────────────────────────────────────────────────
+  const formato = _req.nextUrl.searchParams.get('format')
+  if (formato === 'csv') {
+    const rows = aluno.matriculas.flatMap((m) =>
+      m.notas.map((n) => ({
+        Curso: m.curso.nome,
+        Avaliação: n.descricao,
+        Data: new Date(n.data).toLocaleDateString('pt-BR'),
+        Nota: Number(n.valor).toFixed(1),
+      })),
+    )
+    const csv = Papa.unparse(rows)
+    const filename = `boletim-${aluno.nome.toLowerCase().replace(/\s+/g, '-')}.csv`
+    return new Response('﻿' + csv, {
+      headers: {
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': `attachment; filename="${filename}"`,
+      },
+    })
+  }
+
+  // ── PDF ──────────────────────────────────────────────────────────────────────
   const mediaGeral = calcularMediaGeral(
     aluno.matriculas.map((m) => ({ notas: m.notas.map((n) => ({ valor: Number(n.valor) })) })),
   )
+
+  const CORES = ['#2563eb', '#16a34a', '#d97706', '#7c3aed', '#dc2626']
 
   const buffer = await renderToBuffer(
     <Document>
@@ -122,9 +251,11 @@ export async function GET(_req: NextRequest, { params }: RouteProps) {
           </View>
         </View>
 
-        {aluno.matriculas.map((matricula) => {
-          const media = calcularMedia(matricula.notas.map((n) => Number(n.valor)))
+        {aluno.matriculas.map((matricula, idx) => {
+          const notasNum = matricula.notas.map((n) => ({ ...n, valor: Number(n.valor) }))
+          const media = calcularMedia(notasNum.map((n) => n.valor))
           const situacao = calcularSituacao(media)
+          const color = CORES[idx % CORES.length]
 
           return (
             <View key={matricula.id} style={styles.section}>
@@ -148,13 +279,14 @@ export async function GET(_req: NextRequest, { params }: RouteProps) {
                       <Text style={styles.colData}>
                         {new Date(nota.data).toLocaleDateString('pt-BR')}
                       </Text>
-                      <Text style={styles.colNota}>{nota.valor.toFixed(1)}</Text>
+                      <Text style={styles.colNota}>{Number(nota.valor).toFixed(1)}</Text>
                     </View>
                   ))}
                   <View style={styles.mediaRow}>
                     <Text>Média do curso</Text>
                     <Text>{media !== null ? media.toFixed(1) : '—'}</Text>
                   </View>
+                  <GraficoSvg notas={notasNum} color={color} />
                 </>
               )}
             </View>
