@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { renderToBuffer, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer'
 import { buscarAlunoParaBoletim } from '@/lib/api/alunos'
 import { calcularMedia, calcularMediaGeral, calcularSituacao } from '@/lib/utils'
+import { auth } from '@/lib/auth'
 
 const styles = StyleSheet.create({
   page: { padding: 40, fontFamily: 'Helvetica', fontSize: 10, color: '#18181b' },
@@ -70,11 +71,20 @@ interface RouteProps {
 }
 
 export async function GET(_req: NextRequest, { params }: RouteProps) {
+  const session = await auth()
+  if (!session?.user) {
+    return new Response('Não autenticado', { status: 401 })
+  }
+
   const { id } = await params
   const aluno = await buscarAlunoParaBoletim(id)
 
   if (!aluno) {
     return new Response('Aluno não encontrado', { status: 404 })
+  }
+
+  if (session.user.role === 'ALUNO' && session.user.email !== aluno.email) {
+    return new Response('Não autorizado', { status: 403 })
   }
 
   const mediaGeral = calcularMediaGeral(

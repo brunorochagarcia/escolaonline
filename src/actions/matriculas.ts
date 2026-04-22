@@ -7,7 +7,7 @@ import {
   excluirMatricula as excluirMatriculaDAL,
   MatriculaDuplicadaError,
 } from '@/lib/api/matriculas'
-import { requireAuth } from '@/lib/auth-guard'
+import { requireAuth, requireRole } from '@/lib/auth-guard'
 
 const matriculaSchema = z.object({
   alunoId: z.string().cuid('Selecione um aluno'),
@@ -41,7 +41,7 @@ export async function criarMatricula(formData: unknown): Promise<MatriculaAction
 }
 
 export async function excluirMatricula(id: string) {
-  await requireAuth()
+  await requireRole('ADMIN')
   await excluirMatriculaDAL(id)
   revalidatePath('/matriculas')
 }

@@ -22,6 +22,8 @@ export default async function AlunoDetalhesPage({ params }: PageProps) {
   if (!aluno) notFound()
 
   const role = session?.user?.role
+
+  if (role === 'ALUNO' && session?.user?.email !== aluno.email) notFound()
   const userId = session?.user?.id
   const podeEditar = role === 'ADMIN' || role === 'PROFESSOR'
   const podeEditarProprio = role === 'ALUNO' && session?.user?.email === aluno.email

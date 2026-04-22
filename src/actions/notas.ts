@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { notaSchema, NotaFormData } from '@/schemas/nota'
 import { lancarNota as lancarNotaDAL, excluirNota as excluirNotaDAL } from '@/lib/api/notas'
 import { buscarMatriculaParaLancarNota } from '@/lib/api/matriculas'
-import { requireAuth } from '@/lib/auth-guard'
+import { requireAuth, requireRole } from '@/lib/auth-guard'
 import { enviarAlertaNota } from '@/lib/email'
 
 export type NotaActionResult =
@@ -53,7 +53,7 @@ export async function lancarNota(
 }
 
 export async function excluirNota(id: string, alunoId: string) {
-  await requireAuth()
+  await requireRole('ADMIN', 'PROFESSOR')
   await excluirNotaDAL(id)
   revalidatePath(`/alunos/${alunoId}`)
 }
