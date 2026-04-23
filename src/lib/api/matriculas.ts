@@ -49,7 +49,7 @@ export async function buscarMatriculaParaLancarNota(id: string) {
       id: true,
       alunoId: true,
       aluno: { select: { nome: true, email: true } },
-      curso: { select: { nome: true } },
+      curso: { select: { nome: true, instrutorId: true } },
     },
   })
 }

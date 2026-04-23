@@ -169,6 +169,8 @@ function GraficoSvg({ notas, color }: { notas: NotaChart[]; color: string }) {
   )
 }
 
+const CORES = ['#2563eb', '#16a34a', '#d97706', '#7c3aed', '#dc2626']
+
 // ─── Route ────────────────────────────────────────────────────────────────────
 
 interface RouteProps {
@@ -193,7 +195,7 @@ export async function GET(_req: NextRequest, { params }: RouteProps) {
   }
 
   // ── CSV ──────────────────────────────────────────────────────────────────────
-  const formato = _req.nextUrl.searchParams.get('format')
+  const formato = new URL(_req.url).searchParams.get('format')
   if (formato === 'csv') {
     const rows = aluno.matriculas.flatMap((m) =>
       m.notas.map((n) => ({
@@ -204,7 +206,7 @@ export async function GET(_req: NextRequest, { params }: RouteProps) {
       })),
     )
     const csv = Papa.unparse(rows)
-    const filename = `boletim-${aluno.nome.toLowerCase().replace(/\s+/g, '-')}.csv`
+    const filename = `boletim-${aluno.nome.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}.csv`
     return new Response('﻿' + csv, {
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
@@ -218,9 +220,9 @@ export async function GET(_req: NextRequest, { params }: RouteProps) {
     aluno.matriculas.map((m) => ({ notas: m.notas.map((n) => ({ valor: Number(n.valor) })) })),
   )
 
-  const CORES = ['#2563eb', '#16a34a', '#d97706', '#7c3aed', '#dc2626']
-
-  const buffer = await renderToBuffer(
+  let buffer: Buffer
+  try {
+    buffer = await renderToBuffer(
     <Document>
       <Page size="A4" style={styles.page}>
         <Text style={styles.title}>Boletim Escolar</Text>
@@ -296,12 +298,16 @@ export async function GET(_req: NextRequest, { params }: RouteProps) {
         <Text style={styles.footer}>Escola Online</Text>
       </Page>
     </Document>,
-  )
+    )
+  } catch {
+    return new Response('Erro ao gerar PDF', { status: 500 })
+  }
 
+  const safeName = aluno.nome.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
   return new Response(new Uint8Array(buffer), {
     headers: {
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="boletim-${aluno.nome.toLowerCase().replace(/\s+/g, '-')}.pdf"`,
+      'Content-Disposition': `attachment; filename="${safeName}.pdf"`,
     },
   })
 }

@@ -6,7 +6,12 @@ import { calcularMedia, calcularMediaGeral, calcularSituacao } from '@/lib/utils
 import { SituacaoBadge } from '@/components/shared/SituacaoBadge'
 import { LancarNotaButton } from '@/components/notas/LancarNotaButton'
 import { EditarAlunoButton } from '@/components/alunos/EditarAlunoButton'
-import { GraficoEvolucaoNotas } from '@/components/alunos/GraficoEvolucaoNotas'
+import dynamic from 'next/dynamic'
+
+const GraficoEvolucaoNotas = dynamic(
+  () => import('@/components/alunos/GraficoEvolucaoNotas').then((m) => m.GraficoEvolucaoNotas),
+  { ssr: false },
+)
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -28,7 +33,6 @@ export default async function AlunoDetalhesPage({ params }: PageProps) {
   const userId = session?.user?.id
   const podeEditar = role === 'ADMIN' || role === 'PROFESSOR'
   const podeEditarProprio = role === 'ALUNO' && session?.user?.email === aluno.email
-  const eOProprioPerfil = podeEditarProprio
 
   const { matriculas } = aluno
 
@@ -46,7 +50,7 @@ export default async function AlunoDetalhesPage({ params }: PageProps) {
       {/* Cabeçalho */}
       <div className="mb-6 flex items-start justify-between">
         <div>
-          {!eOProprioPerfil && (
+          {!podeEditarProprio && (
             <Link href="/alunos" className="text-sm text-zinc-500 hover:text-primary transition-colors">
               ← Voltar para alunos
             </Link>
@@ -158,7 +162,7 @@ export default async function AlunoDetalhesPage({ params }: PageProps) {
                 </div>
 
                 {/* Barra de progresso — visível apenas no próprio perfil */}
-                {eOProprioPerfil && (
+                {podeEditarProprio && (
                   <div className="bg-white px-5 py-3 border-b border-secondary">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs text-zinc-500">Progresso</span>

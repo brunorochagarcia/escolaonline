@@ -2,9 +2,13 @@
 
 import { revalidatePath } from 'next/cache'
 import { notaSchema, NotaFormData } from '@/schemas/nota'
-import { lancarNota as lancarNotaDAL, excluirNota as excluirNotaDAL } from '@/lib/api/notas'
+import {
+  lancarNota as lancarNotaDAL,
+  excluirNota as excluirNotaDAL,
+  buscarNotaParaExclusao,
+} from '@/lib/api/notas'
 import { buscarMatriculaParaLancarNota } from '@/lib/api/matriculas'
-import { requireAuth, requireRole } from '@/lib/auth-guard'
+import { requireRole } from '@/lib/auth-guard'
 import { enviarAlertaNota } from '@/lib/email'
 
 export type NotaActionResult =
@@ -16,11 +20,19 @@ export async function lancarNota(
   alunoId: string,
   formData: unknown,
 ): Promise<NotaActionResult> {
-  await requireAuth()
+  const session = await requireRole('ADMIN', 'PROFESSOR')
 
   const parsed = notaSchema.safeParse(formData)
   if (!parsed.success) {
     return { error: parsed.error.flatten().fieldErrors }
+  }
+
+  const matricula = await buscarMatriculaParaLancarNota(matriculaId)
+  if (!matricula) {
+    return { error: { _form: ['Matrícula não encontrada.'] } }
+  }
+  if (session.user.role === 'PROFESSOR' && matricula.curso.instrutorId !== session.user.id) {
+    return { error: { _form: ['Não autorizado.'] } }
   }
 
   let notaCriada: Awaited<ReturnType<typeof lancarNotaDAL>>
@@ -33,27 +45,30 @@ export async function lancarNota(
   revalidatePath(`/alunos/${alunoId}`)
 
   // Alerta por e-mail — falha silenciosa para não bloquear o fluxo
-  buscarMatriculaParaLancarNota(matriculaId)
-    .then((matricula) => {
-      if (!matricula) return
-      return enviarAlertaNota({
-        nomeAluno: matricula.aluno.nome,
-        emailAluno: matricula.aluno.email,
-        nomeCurso: matricula.curso.nome,
-        descricaoNota: notaCriada.descricao,
-        valorNota: Number(notaCriada.valor),
-        dataNota: notaCriada.data,
-      })
-    })
-    .catch(() => {
-      // Email não crítico — falha registrada mas não exposta ao usuário
-    })
+  enviarAlertaNota({
+    nomeAluno: matricula.aluno.nome,
+    emailAluno: matricula.aluno.email,
+    nomeCurso: matricula.curso.nome,
+    descricaoNota: notaCriada.descricao,
+    valorNota: Number(notaCriada.valor),
+    dataNota: notaCriada.data,
+  }).catch(() => {
+    // Email não crítico — falha registrada mas não exposta ao usuário
+  })
 
   return { success: true }
 }
 
 export async function excluirNota(id: string, alunoId: string) {
-  await requireRole('ADMIN', 'PROFESSOR')
+  const session = await requireRole('ADMIN', 'PROFESSOR')
+
+  if (session.user.role === 'PROFESSOR') {
+    const nota = await buscarNotaParaExclusao(id)
+    if (!nota || nota.matricula.curso.instrutorId !== session.user.id) {
+      throw new Error('Não autorizado')
+    }
+  }
+
   await excluirNotaDAL(id)
   revalidatePath(`/alunos/${alunoId}`)
 }

@@ -19,6 +19,13 @@ export async function lancarNota(matriculaId: string, data: NotaFormData) {
   })
 }
 
+export async function buscarNotaParaExclusao(id: string) {
+  return prisma.nota.findUnique({
+    where: { id },
+    select: { id: true, matricula: { select: { curso: { select: { instrutorId: true } } } } },
+  })
+}
+
 export async function excluirNota(id: string) {
   return prisma.nota.delete({ where: { id } })
 }
