@@ -6,12 +6,7 @@ import { calcularMedia, calcularMediaGeral, calcularSituacao } from '@/lib/utils
 import { SituacaoBadge } from '@/components/shared/SituacaoBadge'
 import { LancarNotaButton } from '@/components/notas/LancarNotaButton'
 import { EditarAlunoButton } from '@/components/alunos/EditarAlunoButton'
-import dynamic from 'next/dynamic'
-
-const GraficoEvolucaoNotas = dynamic(
-  () => import('@/components/alunos/GraficoEvolucaoNotas').then((m) => m.GraficoEvolucaoNotas),
-  { ssr: false },
-)
+import { GraficoEvolucaoNotasClient as GraficoEvolucaoNotas } from '@/components/alunos/GraficoEvolucaoNotasClient'
 
 interface PageProps {
   params: Promise<{ id: string }>
