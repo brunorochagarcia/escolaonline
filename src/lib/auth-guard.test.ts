@@ -11,7 +11,7 @@ beforeEach(() => mockAuth.mockReset())
 
 describe('requireAuth', () => {
   it('lança erro quando não há sessão', async () => {
-    mockAuth.mockResolvedValue(null)
+    mockAuth.mockResolvedValue(null as never)
     await expect(requireAuth()).rejects.toThrow(/não autenticado/i)
   })
 
@@ -24,7 +24,7 @@ describe('requireAuth', () => {
 
 describe('requireRole', () => {
   it('lança Não autenticado quando sem sessão', async () => {
-    mockAuth.mockResolvedValue(null)
+    mockAuth.mockResolvedValue(null as never)
     await expect(requireRole('ADMIN')).rejects.toThrow(/não autenticado/i)
   })
 

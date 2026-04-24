@@ -43,3 +43,4 @@ prisma/*.db-journal
 
 # dev notes
 LOGINS.md
+.gstack/

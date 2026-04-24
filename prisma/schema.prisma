@@ -17,6 +17,12 @@ enum Status {
   INATIVO
 }
 
+enum StatusPagamento {
+  PAGO
+  PENDENTE
+  ATRASADO
+}
+
 model User {
   id     String  @id @default(cuid())
   nome   String  @db.VarChar(100)
@@ -52,10 +58,11 @@ model Curso {
 }
 
 model Matricula {
-  id         String   @id @default(cuid())
-  alunoId    String
-  cursoId    String
-  dataInicio DateTime @default(now())
+  id              String          @id @default(cuid())
+  alunoId         String
+  cursoId         String
+  dataInicio      DateTime        @default(now())
+  statusPagamento StatusPagamento @default(PENDENTE)
 
   aluno      Aluno    @relation(fields: [alunoId], references: [id], onDelete: Cascade)
   curso      Curso    @relation(fields: [cursoId], references: [id], onDelete: Cascade)

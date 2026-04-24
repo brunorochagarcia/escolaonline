@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { AlunoFormData } from '@/schemas/aluno'
+import { calcularMedia, calcularMediaGeral, calcularSituacao } from '@/lib/utils/notas'
 
 const alunoListSelect = {
   id: true,
@@ -108,6 +109,58 @@ export async function buscarAlunoParaBoletim(id: string) {
       },
     },
   })
+}
+
+export async function buscarSituacaoPorCurso() {
+  const cursos = await prisma.curso.findMany({
+    where: { status: 'ATIVO' },
+    select: {
+      id: true,
+      nome: true,
+      matriculas: {
+        select: { notas: { select: { valor: true } } },
+      },
+    },
+    orderBy: { nome: 'asc' },
+  })
+
+  return cursos.map(curso => {
+    let aprovados = 0, emAndamento = 0, reprovados = 0
+    for (const matricula of curso.matriculas) {
+      const media = calcularMedia(matricula.notas.map(n => Number(n.valor)))
+      const situacao = calcularSituacao(media)
+      if (situacao === 'Aprovado') aprovados++
+      else if (situacao === 'Reprovado') reprovados++
+      else emAndamento++
+    }
+    return { id: curso.id, nome: curso.nome, total: curso.matriculas.length, aprovados, emAndamento, reprovados }
+  })
+}
+
+export async function buscarSituacaoDosAlunos() {
+  const alunos = await prisma.aluno.findMany({
+    select: {
+      matriculas: {
+        select: { notas: { select: { valor: true } } },
+      },
+    },
+  })
+
+  let aprovados = 0, emAndamento = 0, reprovados = 0
+
+  for (const aluno of alunos) {
+    const media = calcularMediaGeral(
+      aluno.matriculas.map(m => ({
+        notas: m.notas.map(n => ({ valor: Number(n.valor) })),
+      }))
+    )
+    const situacao = calcularSituacao(media)
+    if (situacao === 'Aprovado') aprovados++
+    else if (situacao === 'Reprovado') reprovados++
+    else emAndamento++
+  }
+
+  return { aprovados, emAndamento, reprovados, total: alunos.length }
 }
 
 export async function buscarAlunoIdPorEmail(email: string) {

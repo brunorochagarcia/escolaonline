@@ -78,7 +78,7 @@ export function GraficoEvolucaoNotas({ matriculas }: Props) {
           <XAxis dataKey="data" tick={TICK_STYLE} />
           <YAxis domain={[0, 10]} ticks={[0, 5, 7, 10]} tick={TICK_STYLE} />
           <Tooltip
-            formatter={(v: number | string) => (v != null ? Number(v).toFixed(1) : '—')}
+            formatter={(v: unknown) => (v != null ? Number(v).toFixed(1) : '—')}
             contentStyle={TOOLTIP_STYLE}
           />
           <Legend wrapperStyle={LEGEND_STYLE} />

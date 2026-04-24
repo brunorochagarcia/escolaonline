@@ -57,3 +57,12 @@ export async function buscarMatriculaParaLancarNota(id: string) {
 export async function excluirMatricula(id: string) {
   return prisma.matricula.delete({ where: { id } })
 }
+
+export async function buscarResumoFinanceiro() {
+  const [pago, pendente, atrasado] = await Promise.all([
+    prisma.matricula.count({ where: { statusPagamento: 'PAGO' } }),
+    prisma.matricula.count({ where: { statusPagamento: 'PENDENTE' } }),
+    prisma.matricula.count({ where: { statusPagamento: 'ATRASADO' } }),
+  ])
+  return { pago, pendente, atrasado, total: pago + pendente + atrasado }
+}

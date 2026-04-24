@@ -1,4 +1,4 @@
-import { PrismaClient, Status } from '@prisma/client'
+import { PrismaClient, Status, StatusPagamento } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import bcrypt from 'bcryptjs'
 
@@ -19,6 +19,13 @@ const rand = () => rng()
 const randInt = (min: number, max: number) => Math.floor(rand() * (max - min + 1)) + min
 const randFloat = (min: number, max: number) => parseFloat((rand() * (max - min) + min).toFixed(2))
 const pick = <T>(arr: T[]) => arr[Math.floor(rand() * arr.length)]
+
+function pickStatusPagamento(): StatusPagamento {
+  const r = rand()
+  if (r < 0.60) return StatusPagamento.PAGO
+  if (r < 0.85) return StatusPagamento.PENDENTE
+  return StatusPagamento.ATRASADO
+}
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr]
@@ -150,7 +157,7 @@ async function main() {
     [cursoWeb,       [{ descricao: 'Prova 1', valor: 6.5 }, { descricao: 'Trabalho Final', valor: 8.0 }]],
   ] as const) {
     const matricula = await prisma.matricula.create({
-      data: { alunoId: alunoTeste.id, cursoId: curso.id, dataInicio: new Date('2024-02-01') },
+      data: { alunoId: alunoTeste.id, cursoId: curso.id, dataInicio: new Date('2024-02-01'), statusPagamento: StatusPagamento.PAGO },
     })
     await prisma.nota.createMany({
       data: notas.map((n, i) => ({
@@ -168,7 +175,7 @@ async function main() {
     [cursos.find((c) => c.nome.includes('Python'))!, [{ descricao: 'Atividade 1', valor: 7.5 }]],
   ] as const) {
     const matricula = await prisma.matricula.create({
-      data: { alunoId: professorAluno.id, cursoId: curso.id, dataInicio: new Date('2023-08-01') },
+      data: { alunoId: professorAluno.id, cursoId: curso.id, dataInicio: new Date('2023-08-01'), statusPagamento: StatusPagamento.PAGO },
     })
     await prisma.nota.createMany({
       data: notas.map((n, i) => ({
@@ -217,7 +224,7 @@ async function main() {
       const dataInicio = new Date(`${anoInicio}-${String(mesInicio).padStart(2, '0')}-01`)
 
       const matricula = await prisma.matricula.create({
-        data: { alunoId: aluno.id, cursoId: curso.id, dataInicio },
+        data: { alunoId: aluno.id, cursoId: curso.id, dataInicio, statusPagamento: pickStatusPagamento() },
       })
       totalMatriculas++
 

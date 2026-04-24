@@ -67,7 +67,7 @@ beforeEach(() => {
 
 describe('GET /api/boletim/[id]', () => {
   it('retorna 401 quando não autenticado', async () => {
-    mockAuth.mockResolvedValue(null)
+    mockAuth.mockResolvedValue(null as never)
     const res = await GET(makeReq('http://x/api/boletim/aluno-1'), makeParams('aluno-1'))
     expect(res.status).toBe(401)
   })

@@ -135,7 +135,7 @@ function GraficoSvg({ notas, color }: { notas: NotaChart[]; color: string }) {
       {/* labels eixo Y */}
       {[0, 5, 7, 10].map((v) => (
         <Text key={v} x={PL - 3} y={yOf(v) + 2.5}
-          fontSize={6} fill="#71717a" textAnchor="end"
+          style={{ fontSize: 6 }} fill="#71717a" textAnchor="end"
         >
           {v}
         </Text>
@@ -160,7 +160,7 @@ function GraficoSvg({ notas, color }: { notas: NotaChart[]; color: string }) {
       {/* labels eixo X */}
       {tickDatas.map((t, i) => (
         <Text key={i} x={t.x} y={CH - 4}
-          fontSize={6} fill="#71717a" textAnchor="middle"
+          style={{ fontSize: 6 }} fill="#71717a" textAnchor="middle"
         >
           {t.label}
         </Text>

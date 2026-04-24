@@ -28,6 +28,7 @@ describe('criarMatricula (RN-03)', () => {
       alunoId: 'aluno-1',
       cursoId: 'curso-1',
       dataInicio: new Date(),
+      statusPagamento: 'PENDENTE' as const,
     }
     mockCreate.mockResolvedValue(matriculaEsperada)
 

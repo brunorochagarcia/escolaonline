@@ -1,7 +1,7 @@
 import { defineConfig } from 'prisma/config'
 import { config } from 'dotenv'
 
-config()
+config({ path: '.env.local' })
 
 export default defineConfig({
   migrations: {
